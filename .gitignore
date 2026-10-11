@@ -1,0 +1,7 @@
+# chaves nunca vão para o git
+.env
+*.env
+**/*.env
+node_modules/
+__pycache__/
+clientes/*/n8n/backup/

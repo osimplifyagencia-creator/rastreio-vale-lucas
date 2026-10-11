@@ -1,0 +1,191 @@
+{
+  "name": "[RASTREIO 8] Saúde diária | valeambientes",
+  "nodes": [
+    {
+      "id": "6c68d42e-fff3-422d-aa79-962531303873",
+      "name": "gatilho",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "98070656-01bd-4543-be11-ed5de92ef797",
+      "name": "configuracoes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// [RASTREIO] Configuração do cliente valeambientes. GERADO por rastreio.py montar a partir do config.json:\n// mudou algo? edite o config.json e monte de novo, não edite aqui.\nreturn [{ json: {\n  \"cliente\": \"valeambientes\",\n  \"kommo_api\": \"https://reginaldovaleambientescombr.kommo.com/api/v4\",\n  \"kommo_conta\": 32040023,\n  \"pipelines\": [\n    12405720\n  ],\n  \"campos_tracking\": {\n    \"UTM_CONTENT\": 330516,\n    \"UTM_MEDIUM\": 330518,\n    \"UTM_CAMPAIGN\": 330520,\n    \"UTM_SOURCE\": 330522,\n    \"UTM_TERM\": 330524,\n    \"UTM_REFERRER\": 330526,\n    \"REFERRER\": 330528,\n    \"GCLIENTID\": 330530,\n    \"GCLID\": 330532,\n    \"FBCLID\": 330534\n  },\n  \"campo_origem_id\": null,\n  \"origem_enums\": {},\n  \"etapas_mapeadas\": [\n    \"12405720:95858036\",\n    \"12405720:95858040\",\n    \"12405720:142\"\n  ],\n  \"espera_sessoes\": true,\n  \"lead_max_horas_antes\": 48,\n  \"teto_sem_lead\": 10\n} }];\n"
+      }
+    },
+    {
+      "id": "808ad5a0-3339-4490-b90a-ef5cefc52c80",
+      "name": "saude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://awdxhenuyvsqsivvkycj.supabase.co/rest/v1/rpc/rastreio_saude",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({}) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "de966c19-de3e-40ee-8604-db02f583d7a9",
+      "name": "avalia",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// [RASTREIO 8] Uma vez por dia: se algo saiu da faixa, o workflow ESTOURA de propósito, e o errorWorkflow\n// da instância avisa (com o freio de repetição que ele já tem). Verde com contador em zero é suspeito.\nconst cfg = $('configuracoes').first().json;\nconst s = $input.first().json || {};\nconst alertas = [];\nif (cfg.espera_sessoes && Number(s.sessoes_24h) === 0) alertas.push('nenhuma visita registrada pela etiqueta em 24 h (a etiqueta saiu da página?)');\nif (Number(s.cliques_whatsapp_24h) > 5 && Number(s.casadas_24h) === 0) alertas.push(`${s.cliques_whatsapp_24h} cliques no WhatsApp e nenhum lead casado em 24 h (o webhook do Kommo parou?)`);\nif (Number(s.sem_lead_24h) > (cfg.teto_sem_lead || 10)) alertas.push(`${s.sem_lead_24h} provas de origem sem lead em 24 h`);\nif (Number(s.fila_parada) > 0) alertas.push(`${s.fila_parada} conversões paradas há mais de 6 h na fila`);\nif (Number(s.recusados_24h) > 0) alertas.push(`${s.recusados_24h} conversões recusadas pela plataforma em 24 h`);\nif (Number(s.valor_suspeito_24h) > 0) alertas.push(`${s.valor_suspeito_24h} vendas com valor fora da faixa (centavos?), não enviadas`);\nreturn [{ json: { ...s, alertas, tem_alerta: alertas.length > 0,\n  mensagem: `[RASTREIO ${cfg.cliente}] ` + alertas.join(' | ') } }];\n"
+      }
+    },
+    {
+      "id": "41b2de60-43ed-4c5b-80d3-b2d0c07bac0f",
+      "name": "tem alerta?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2e027f64-5655-4179-a08f-8087cf5e2ec6",
+              "leftValue": "={{ $json.tem_alerta }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "ac147c8c-315c-4de0-ba20-1aa6488eaea3",
+      "name": "avisa",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "errorMessage": "={{ 'Rastreio valeambientes: ' + $json.alertas.join(' | ') }}"
+      }
+    }
+  ],
+  "connections": {
+    "gatilho": {
+      "main": [
+        [
+          {
+            "node": "configuracoes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "configuracoes": {
+      "main": [
+        [
+          {
+            "node": "saude",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "saude": {
+      "main": [
+        [
+          {
+            "node": "avalia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "avalia": {
+      "main": [
+        [
+          {
+            "node": "tem alerta?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "tem alerta?": {
+      "main": [
+        [
+          {
+            "node": "avisa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo",
+    "errorWorkflow": "EredNPgTvKpCDUmI"
+  }
+}

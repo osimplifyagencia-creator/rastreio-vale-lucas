@@ -1,0 +1,93 @@
+{
+  "name": "[RASTREIO 1] Sessão do site | valeambientes",
+  "nodes": [
+    {
+      "id": "3be9dda0-dc85-496a-a09b-df8406f24968",
+      "name": "gatilho",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rastreio-sessao-valeambientes-bf831347162f",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "ba5bc988-332a-4acc-9817-bdc3aa99839a"
+    },
+    {
+      "id": "68db969e-5238-4eeb-b63b-07d56127efcb",
+      "name": "valida",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// [RASTREIO 1] Valida o que a etiqueta da página mandou. Nada aqui confia no navegador:\n// só passam o código no formato certo e os campos conhecidos, cortados no tamanho.\nconst CODIGO = /^[A-HJ-NP-Z2-9]{5}$/;\nconst CAMPOS = ['gclid', 'gbraid', 'wbraid', 'fbclid', 'fbc', 'fbp', 'utm_source', 'utm_medium',\n  'utm_campaign', 'utm_content', 'utm_term', 'pagina', 'referrer', 'evento'];\nconst EVENTOS = ['visita', 'whatsapp_click'];\nconst out = [];\nfor (const it of $input.all()) {\n  let b = it.json.body;\n  if (typeof b === 'string') { try { b = JSON.parse(b); } catch (e) { continue; } }\n  if (!b || typeof b !== 'object' || Array.isArray(b)) continue;\n  const codigo = String(b.codigo || '').toUpperCase();\n  if (!CODIGO.test(codigo)) continue;\n  const p = { codigo };\n  for (const c of CAMPOS) {\n    const v = b[c];\n    if (v === undefined || v === null || v === '') continue;\n    p[c] = String(v).slice(0, (c === 'pagina' || c === 'referrer') ? 500 : 300);\n  }\n  if (p.evento && !EVENTOS.includes(p.evento)) delete p.evento;\n  if (b.ensaio === true || b.ensaio === 'true') p.ensaio = true;\n  out.push({ json: { p } });\n}\nreturn out;\n"
+      }
+    },
+    {
+      "id": "393b80db-cb24-497a-858b-ce7dccdbc490",
+      "name": "grava sessao",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://awdxhenuyvsqsivvkycj.supabase.co/rest/v1/rpc/rastreio_sessao_gravar",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p: $json.p }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    }
+  ],
+  "connections": {
+    "gatilho": {
+      "main": [
+        [
+          {
+            "node": "valida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "valida": {
+      "main": [
+        [
+          {
+            "node": "grava sessao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo",
+    "errorWorkflow": "EredNPgTvKpCDUmI"
+  }
+}

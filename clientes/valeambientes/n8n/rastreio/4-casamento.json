@@ -1,0 +1,555 @@
+{
+  "name": "[RASTREIO 4] Casamento com o lead | valeambientes",
+  "nodes": [
+    {
+      "id": "ea3a9201-7701-4dc2-afc7-e94c8079afd2",
+      "name": "gatilho",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "5dd0cbdd-e85b-4191-92e9-b9b672b6e5fa",
+      "name": "configuracoes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// [RASTREIO] Configuração do cliente valeambientes. GERADO por rastreio.py montar a partir do config.json:\n// mudou algo? edite o config.json e monte de novo, não edite aqui.\nreturn [{ json: {\n  \"cliente\": \"valeambientes\",\n  \"kommo_api\": \"https://reginaldovaleambientescombr.kommo.com/api/v4\",\n  \"kommo_conta\": 32040023,\n  \"pipelines\": [\n    12405720\n  ],\n  \"campos_tracking\": {\n    \"UTM_CONTENT\": 330516,\n    \"UTM_MEDIUM\": 330518,\n    \"UTM_CAMPAIGN\": 330520,\n    \"UTM_SOURCE\": 330522,\n    \"UTM_TERM\": 330524,\n    \"UTM_REFERRER\": 330526,\n    \"REFERRER\": 330528,\n    \"GCLIENTID\": 330530,\n    \"GCLID\": 330532,\n    \"FBCLID\": 330534\n  },\n  \"campo_origem_id\": null,\n  \"origem_enums\": {},\n  \"etapas_mapeadas\": [\n    \"12405720:95858036\",\n    \"12405720:95858040\",\n    \"12405720:142\"\n  ],\n  \"espera_sessoes\": true,\n  \"lead_max_horas_antes\": 48,\n  \"teto_sem_lead\": 10\n} }];\n"
+      }
+    },
+    {
+      "id": "cc55f00a-fc3e-4538-9b01-8bffa4d14a11",
+      "name": "a casar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://awdxhenuyvsqsivvkycj.supabase.co/rest/v1/rpc/rastreio_a_casar",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ limite: 50 }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "4104f99a-3357-4f10-9f8c-ade6ad6ceb06",
+      "name": "explode",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// [RASTREIO 4] Lista do banco (rastreio_a_casar) vira um item por evidência, com o endereço de busca no Kommo.\n// Evidência do Kommo já sabe o lead; a da Meta só tem o telefone e procura o contato pelos 8 finais\n// (a busca do Kommo) para depois conferir DDD + 8 no resolve.\nconst cfg = $('configuracoes').first().json;\nconst out = [];\nfor (const it of $input.all()) {\n  for (const r of (it.json.itens || [])) {\n    let url = null;\n    let tipo = null;\n    if (r.lead_id) { url = `${cfg.kommo_api}/leads/${r.lead_id}?with=contacts`; tipo = 'lead'; }\n    else if (r.contato_id) { url = `${cfg.kommo_api}/contacts/${r.contato_id}?with=leads`; tipo = 'contato_id'; }\n    else if (r.busca_tel) { url = `${cfg.kommo_api}/contacts?query=${encodeURIComponent(r.busca_tel)}&with=leads&limit=50`; tipo = 'contato'; }\n    if (!url) continue;  // o banco já grava essas como ignoradas; aqui é só a segunda trava\n    out.push({ json: { ...r, busca_url: url, busca_tipo: tipo } });\n  }\n}\nreturn out;\n"
+      }
+    },
+    {
+      "id": "28d57c8f-7add-47f0-af83-abf30d5d0b29",
+      "name": "busca",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.busca_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          },
+          "batching": {
+            "batch": {
+              "batchSize": 5,
+              "batchInterval": 1000
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DfhIaL8GcP4nm2cu",
+          "name": "[RASTREIO] Kommo | valeambientes"
+        }
+      }
+    },
+    {
+      "id": "d2c3000f-6fb3-430d-97c9-7d40014ee1f2",
+      "name": "resolve",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// [RASTREIO 4] Resposta da busca no Kommo vira o lead_id certo (ou o motivo de não ter achado).\n// O nó HTTP anterior roda com resposta em TEXTO e sem estourar: o Kommo responde 204 sem corpo quando a\n// busca não acha nada, e o parser de JSON do n8n quebra nisso. Credencial recusada, porém, ESTOURA aqui.\nfunction corpo(j) {\n  if (j.error) {\n    const m = String((j.error && j.error.message) || j.error);\n    if (/401|403|unauthori|forbidden|credential/i.test(m)) throw new Error('Kommo recusou a credencial: ' + m.slice(0, 200));\n    if (/json|string|undefined|204|empty/i.test(m)) return null;\n    throw new Error('Kommo devolveu erro: ' + m.slice(0, 200));\n  }\n  const st = Number(j.statusCode || 200);\n  if (st === 204) return null;\n  if (st === 401 || st === 403) throw new Error('Kommo recusou a credencial (HTTP ' + st + ')');\n  if (st >= 400) return { __status: st };\n  let b = j.body !== undefined ? j.body : j.data;\n  if (typeof b === 'string') { if (!b.trim()) return null; b = JSON.parse(b); }\n  return b || null;\n}\nfunction chaveTel(t) {\n  let d = String(t || '').replace(/\\D/g, '');\n  if (d.length === 10 || d.length === 11) d = '55' + d;\n  if (d.startsWith('55') && (d.length === 12 || d.length === 13)) return d.slice(2, 4) + d.slice(-8);\n  return d || null;\n}\nconst fontes = $('explode').all();\nconst respostas = $input.all();\nif (fontes.length !== respostas.length) {\n  throw new Error(`pareamento quebrado: ${fontes.length} buscas e ${respostas.length} respostas`);\n}\nconst cfg = $('configuracoes').first().json;\nconst out = [];\nrespostas.forEach((it, i) => {\n  const r = fontes[i].json;\n  const b = corpo(it.json);\n  let leadId = null, contatoId = r.contato_id || null, motivo = null;\n  if (r.busca_tipo === 'lead') {\n    if (b && b.id) { leadId = b.id; contatoId = contatoId || (((b._embedded || {}).contacts || [])[0] || {}).id || null; }\n    else motivo = b && b.__status ? 'kommo_http_' + b.__status : 'lead_nao_existe';\n  } else if (r.busca_tipo === 'contato_id') {\n    // o Kommo disse qual contato escreveu: o lead é o mais novo dele (o filtro de funil e idade é do decide)\n    const leads = (((b || {})._embedded || {}).leads || []).map((l) => l.id).sort((a, z) => z - a);\n    if (b && b.id && leads.length) { leadId = leads[0]; contatoId = b.id; }\n    else motivo = b && b.__status ? 'kommo_http_' + b.__status : (b && b.id ? 'contato_sem_lead' : 'contato_nao_existe');\n  } else {\n    const contatos = ((b || {})._embedded || {}).contacts || [];\n    const casam = contatos.filter((c) => (c.custom_fields_values || [])\n      .filter((f) => f.field_code === 'PHONE')\n      .some((f) => (f.values || []).some((v) => chaveTel(v.value) === r.tel_chave)));\n    // o lead mais novo do contato que casou; o filtro de funil e de idade é do decide\n    const leads = casam.flatMap((c) => (((c._embedded || {}).leads) || []).map((l) => ({ id: l.id, contato: c.id })));\n    leads.sort((a, z) => z.id - a.id);\n    if (leads.length) { leadId = leads[0].id; contatoId = leads[0].contato; }\n    else motivo = contatos.length ? 'telefone_nao_confere' : 'contato_nao_achado';\n  }\n  out.push({ json: { ...r, lead_id: leadId, contato_id: contatoId, motivo,\n                     lead_url: leadId ? `${cfg.kommo_api}/leads/${leadId}` : null } });\n});\nreturn out;\n"
+      }
+    },
+    {
+      "id": "73e791a0-e604-426b-920f-c5d3fcc494e6",
+      "name": "achou lead?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1c7d673e-17ed-421d-a30a-b15cef627727",
+              "leftValue": "={{ $json.lead_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "268d042f-17af-4234-813a-78475ee55071",
+      "name": "le lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        -100
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.lead_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          },
+          "batching": {
+            "batch": {
+              "batchSize": 5,
+              "batchInterval": 1000
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DfhIaL8GcP4nm2cu",
+          "name": "[RASTREIO] Kommo | valeambientes"
+        }
+      }
+    },
+    {
+      "id": "4b68231e-ca32-433d-b14e-a0818aafdd98",
+      "name": "decide",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        -100
+      ],
+      "parameters": {
+        "jsCode": "// [RASTREIO 4] Decide o que gravar no lead. Regra de ouro: SÓ CAMPO VAZIO. O que o lead já tem\n// (escrito pela equipe, pela IA ou por outro rastreio) não é trocado aqui; a prova completa fica no banco.\nfunction corpo(j) {\n  if (j.error) {\n    const m = String((j.error && j.error.message) || j.error);\n    if (/401|403|unauthori|forbidden|credential/i.test(m)) throw new Error('Kommo recusou a credencial: ' + m.slice(0, 200));\n    return null;\n  }\n  const st = Number(j.statusCode || 200);\n  if (st === 401 || st === 403) throw new Error('Kommo recusou a credencial (HTTP ' + st + ')');\n  if (st >= 400 || st === 204) return null;\n  let b = j.body !== undefined ? j.body : j.data;\n  if (typeof b === 'string') { if (!b.trim()) return null; b = JSON.parse(b); }\n  return b || null;\n}\nconst cfg = $('configuracoes').first().json;\nconst fontes = $('achou lead?').all();\nconst respostas = $input.all();\nif (fontes.length !== respostas.length) {\n  throw new Error(`pareamento quebrado: ${fontes.length} leads e ${respostas.length} respostas`);\n}\nconst out = [];\nrespostas.forEach((it, i) => {\n  const r = fontes[i].json;\n  const lead = corpo(it.json);\n  const base = { evidencia_id: r.evidencia_id, lead_id: r.lead_id, contato_id: r.contato_id };\n  if (!lead || !lead.id) { out.push({ json: { ...base, ok: false, motivo: 'lead_nao_lido', tem_patch: false } }); return; }\n\n  if (cfg.pipelines && cfg.pipelines.length && !cfg.pipelines.includes(lead.pipeline_id)) {\n    out.push({ json: { ...base, ok: false, motivo: 'fora_do_funil_' + lead.pipeline_id, tem_patch: false } });\n    return;\n  }\n  // achado só pelo telefone: o lead tem de ter nascido perto da mensagem (senão é um lead antigo da pessoa)\n  if (r.busca_tipo === 'contato') {\n    const evid = Date.parse(r.criado_em) / 1000;\n    const horas = (evid - Number(lead.created_at || 0)) / 3600;\n    if (horas > (cfg.lead_max_horas_antes || 48)) {\n      out.push({ json: { ...base, ok: false, motivo: 'lead_antigo', tem_patch: false } });\n      return;\n    }\n  }\n\n  const atuais = {};\n  for (const f of (lead.custom_fields_values || [])) {\n    const v = (f.values || [])[0];\n    if (v && v.value !== undefined && v.value !== null && String(v.value).trim() !== '') atuais[f.field_id] = v;\n  }\n  const d = r.dados || {};\n  const campos = [];\n  const gravados = [];\n  const poe = (fieldId, valor, nome) => {\n    if (!fieldId || valor === undefined || valor === null || String(valor).trim() === '') return;\n    if (atuais[fieldId]) return;\n    campos.push({ field_id: Number(fieldId), values: [{ value: String(valor).slice(0, 250) }] });\n    gravados.push(nome);\n  };\n  const t = cfg.campos_tracking || {};\n  poe(t.UTM_SOURCE, d.utm_source, 'utm_source');\n  poe(t.UTM_MEDIUM, d.utm_medium, 'utm_medium');\n  poe(t.UTM_CAMPAIGN, d.utm_campaign, 'utm_campaign');\n  poe(t.UTM_CONTENT, d.utm_content, 'utm_content');\n  poe(t.UTM_TERM, d.utm_term, 'utm_term');\n  poe(t.GCLID, d.gclid || d.gbraid || d.wbraid, 'gclid');\n  poe(t.FBCLID, d.fbclid, 'fbclid');\n  const extra = cfg.campos_extra || {};\n  poe(extra.codigo, d.codigo, 'codigo');\n  poe(extra.ad_id, d.ad_id, 'ad_id');\n  poe(extra.ctwa_clid, d.ctwa_clid, 'ctwa_clid');\n  poe(extra.grau, r.grau, 'grau');\n\n  // Origem do Lead é lista: só grava se estiver vazia e se a origem tiver opção na lista\n  const enumId = r.origem ? (cfg.origem_enums || {})[r.origem] : null;\n  if (cfg.campo_origem_id && enumId && !atuais[cfg.campo_origem_id]) {\n    campos.push({ field_id: Number(cfg.campo_origem_id), values: [{ enum_id: Number(enumId) }] });\n    gravados.push('origem');\n  }\n\n  out.push({ json: { ...base, ok: true, motivo: gravados.length ? null : 'nada_vazio_para_gravar',\n    gravados, tem_patch: campos.length > 0,\n    patch_url: `${cfg.kommo_api}/leads/${lead.id}`,\n    patch: { custom_fields_values: campos } } });\n});\nreturn out;\n"
+      }
+    },
+    {
+      "id": "ceabd272-278a-44dd-92fd-85051771267a",
+      "name": "tem patch?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1980,
+        -100
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d9c1590f-d525-43e9-a074-946b6dbd3f96",
+              "leftValue": "={{ $json.tem_patch }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      }
+    },
+    {
+      "id": "95f43901-ee10-4a05-8007-d41ec7a307bd",
+      "name": "grava no lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        -200
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $json.patch_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          },
+          "batching": {
+            "batch": {
+              "batchSize": 5,
+              "batchInterval": 1000
+            }
+          }
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.patch) }}"
+      },
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DfhIaL8GcP4nm2cu",
+          "name": "[RASTREIO] Kommo | valeambientes"
+        }
+      }
+    },
+    {
+      "id": "49c8ebbd-20c7-434c-99ba-999ab4fa2cb9",
+      "name": "confere patch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        -200
+      ],
+      "parameters": {
+        "jsCode": "// [RASTREIO 4] Depois do PATCH no lead: só marca \"casado\" o que o Kommo aceitou.\n// 401/403 estoura (o errorWorkflow avisa); outro erro volta para a fila com o motivo e tenta de novo.\nconst fontes = $('tem patch?').all();\nconst respostas = $input.all();\nif (fontes.length !== respostas.length) throw new Error(`pareamento quebrado: ${fontes.length} x ${respostas.length}`);\nconst out = [];\nrespostas.forEach((it, i) => {\n  const f = fontes[i].json;\n  const j = it.json || {};\n  let st = Number(j.statusCode || 0);\n  if (j.error) {\n    const m = String((j.error && j.error.message) || j.error);\n    if (/401|403|unauthori|forbidden|credential/i.test(m)) throw new Error('Kommo recusou a credencial no PATCH: ' + m.slice(0, 200));\n    st = st || 599;\n  }\n  if (st === 401 || st === 403) throw new Error('Kommo recusou a credencial no PATCH (HTTP ' + st + ')');\n  const ok = st >= 200 && st < 300;\n  out.push({ json: ok ? f : { ...f, ok: false, motivo: 'patch_http_' + st } });\n});\nreturn out;\n"
+      }
+    },
+    {
+      "id": "7331423c-7931-4243-b912-dcfc2d785aa0",
+      "name": "marca casado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        -200
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://awdxhenuyvsqsivvkycj.supabase.co/rest/v1/rpc/rastreio_casado",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p: $json }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "335c775e-fee6-440c-ace4-7347cdd57909",
+      "name": "marca sem patch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://awdxhenuyvsqsivvkycj.supabase.co/rest/v1/rpc/rastreio_casado",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p: $json }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "16930a37-48ae-4a0a-afeb-d1571a10ea88",
+      "name": "marca sem lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        150
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://awdxhenuyvsqsivvkycj.supabase.co/rest/v1/rpc/rastreio_casado",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p: $json }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    }
+  ],
+  "connections": {
+    "gatilho": {
+      "main": [
+        [
+          {
+            "node": "configuracoes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "configuracoes": {
+      "main": [
+        [
+          {
+            "node": "a casar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "a casar": {
+      "main": [
+        [
+          {
+            "node": "explode",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "explode": {
+      "main": [
+        [
+          {
+            "node": "busca",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "busca": {
+      "main": [
+        [
+          {
+            "node": "resolve",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "resolve": {
+      "main": [
+        [
+          {
+            "node": "achou lead?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "achou lead?": {
+      "main": [
+        [
+          {
+            "node": "le lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "marca sem lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "le lead": {
+      "main": [
+        [
+          {
+            "node": "decide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "decide": {
+      "main": [
+        [
+          {
+            "node": "tem patch?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "tem patch?": {
+      "main": [
+        [
+          {
+            "node": "grava no lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "marca sem patch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "grava no lead": {
+      "main": [
+        [
+          {
+            "node": "confere patch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "confere patch": {
+      "main": [
+        [
+          {
+            "node": "marca casado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo",
+    "errorWorkflow": "EredNPgTvKpCDUmI"
+  }
+}

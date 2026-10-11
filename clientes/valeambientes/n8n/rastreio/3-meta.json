@@ -1,0 +1,89 @@
+{
+  "name": "[RASTREIO 3] Meta referral (sub) | valeambientes",
+  "nodes": [
+    {
+      "id": "8a94268d-13d0-4182-bef1-af7c7654254f",
+      "name": "gatilho",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "53c1755d-6e01-4230-83f7-9c92f702b35f",
+      "name": "extrai",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// [RASTREIO 3] Mensagem do WhatsApp pela Meta (gatilho do app DEDICADO do cliente). Só sai quem veio\n// de anúncio (tem referral). Nenhum texto de conversa é guardado: só o que prova a origem.\nfunction desembrulha(raw) {\n  if (!raw) return {};\n  if (Array.isArray(raw)) return raw[0] || {};\n  if (raw.messaging_product) return raw;\n  if (raw.body && raw.body.entry) return ((raw.body.entry[0] || {}).changes || [])[0]?.value || {};\n  if (raw.entry) return ((raw.entry[0] || {}).changes || [])[0]?.value || {};\n  return raw;\n}\nconst out = [];\nfor (const it of $input.all()) {\n  const v = desembrulha(it.json);\n  for (const msg of (v.messages || [])) {\n    const ref = msg.referral;\n    if (!ref || !msg.from) continue;\n    out.push({ json: { p: {\n      fonte: 'meta_referral',\n      chave_unica: 'wamid:' + msg.id,\n      telefone: String(msg.from),\n      ad_id: ref.source_type === 'ad' ? (ref.source_id || null) : null,\n      ctwa_clid: ref.ctwa_clid || null,\n      headline: ref.headline || null,\n      source_url: ref.source_url || null,\n      dados: { source_type: ref.source_type || null, media_type: ref.media_type || null,\n               phone_number_id: (v.metadata || {}).phone_number_id || null },\n    } } });\n  }\n}\nreturn out;\n"
+      }
+    },
+    {
+      "id": "593f4f92-216b-4bde-8dc8-b2809b3a3731",
+      "name": "grava evidencia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://awdxhenuyvsqsivvkycj.supabase.co/rest/v1/rpc/rastreio_evidencia_gravar",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p: $json.p }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    }
+  ],
+  "connections": {
+    "gatilho": {
+      "main": [
+        [
+          {
+            "node": "extrai",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extrai": {
+      "main": [
+        [
+          {
+            "node": "grava evidencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo",
+    "errorWorkflow": "EredNPgTvKpCDUmI"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "rastreio-valeambientes",
+  "private": true,
+  "description": "Postgres descartavel (PGlite) para provar o banco do rastreio antes de aplicar no cliente.",
+  "dependencies": { "@electric-sql/pglite": "0.5.8" }
+}

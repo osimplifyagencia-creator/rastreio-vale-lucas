@@ -1,0 +1,117 @@
+{
+  "name": "[RASTREIO 2] Entrada Kommo (código) | valeambientes",
+  "nodes": [
+    {
+      "id": "2274efe0-f260-4ec0-8bb6-848fe8cd36b9",
+      "name": "gatilho",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rastreio-kommo-msg-valeambientes-4bdd02935bd4",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "4837b03e-6543-42b9-ba6b-b36f259c2ae4"
+    },
+    {
+      "id": "b028529f-a2ec-42fa-8ba8-ebb683aeae4a",
+      "name": "configuracoes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// [RASTREIO] Configuração do cliente valeambientes. GERADO por rastreio.py montar a partir do config.json:\n// mudou algo? edite o config.json e monte de novo, não edite aqui.\nreturn [{ json: {\n  \"cliente\": \"valeambientes\",\n  \"kommo_api\": \"https://reginaldovaleambientescombr.kommo.com/api/v4\",\n  \"kommo_conta\": 32040023,\n  \"pipelines\": [\n    12405720\n  ],\n  \"campos_tracking\": {\n    \"UTM_CONTENT\": 330516,\n    \"UTM_MEDIUM\": 330518,\n    \"UTM_CAMPAIGN\": 330520,\n    \"UTM_SOURCE\": 330522,\n    \"UTM_TERM\": 330524,\n    \"UTM_REFERRER\": 330526,\n    \"REFERRER\": 330528,\n    \"GCLIENTID\": 330530,\n    \"GCLID\": 330532,\n    \"FBCLID\": 330534\n  },\n  \"campo_origem_id\": null,\n  \"origem_enums\": {},\n  \"etapas_mapeadas\": [\n    \"12405720:95858036\",\n    \"12405720:95858040\",\n    \"12405720:142\"\n  ],\n  \"espera_sessoes\": true,\n  \"lead_max_horas_antes\": 48,\n  \"teto_sem_lead\": 10\n} }];\n"
+      }
+    },
+    {
+      "id": "18e910c1-cb1e-4a7f-a60e-1742c8fbe4ae",
+      "name": "extrai",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// [RASTREIO 2] Mensagem que chegou no Kommo (webhook add_message, corpo form-urlencoded com chaves\n// planas do tipo body['message[add][0][text]']). Só interessa mensagem RECEBIDA com o código \"[XXXXX]\".\n// O caminho do webhook é o segredo; a conta no corpo é a segunda trava contra post forjado.\nconst MARCA = /\\[([A-HJ-NP-Z2-9]{5})\\]/;\nconst cfg = $('configuracoes').first().json;\nconst out = [];\nfor (const it of $('gatilho').all()) {  // o gatilho, nao o $input: antes daqui roda o configuracoes\n  const b = it.json.body || {};\n  if (cfg.kommo_conta && String(b['account[id]']) !== String(cfg.kommo_conta)) continue;\n  for (let i = 0; i < 50; i++) {\n    const k = (campo) => b[`message[add][${i}][${campo}]`];\n    if (k('id') === undefined && k('text') === undefined) break;\n    const tipo = k('type');\n    if (tipo && tipo !== 'incoming') continue;\n    const m = String(k('text') || '').toUpperCase().match(MARCA);\n    if (!m) continue;\n    const ehLead = (k('entity_type') || k('element_type')) === 'lead' || String(k('element_type')) === '2';\n    const leadId = Number(ehLead ? (k('entity_id') || k('element_id')) : 0) || null;\n    out.push({ json: { p: {\n      fonte: 'kommo_codigo',\n      chave_unica: 'kommo:' + (k('id') || `${k('talk_id')}:${k('created_at')}`),\n      codigo: m[1],\n      lead_id: leadId,\n      contato_id: Number(k('contact_id')) || null,\n    } } });\n  }\n}\nreturn out;\n"
+      }
+    },
+    {
+      "id": "8a00d9a7-057b-4538-b453-2ead73b9e90f",
+      "name": "grava evidencia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://awdxhenuyvsqsivvkycj.supabase.co/rest/v1/rpc/rastreio_evidencia_gravar",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p: $json.p }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    }
+  ],
+  "connections": {
+    "gatilho": {
+      "main": [
+        [
+          {
+            "node": "configuracoes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "configuracoes": {
+      "main": [
+        [
+          {
+            "node": "extrai",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extrai": {
+      "main": [
+        [
+          {
+            "node": "grava evidencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo",
+    "errorWorkflow": "EredNPgTvKpCDUmI"
+  }
+}

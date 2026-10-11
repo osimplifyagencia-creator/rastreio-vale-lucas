@@ -1,0 +1,33 @@
+{
+  "_como_usar": "Copie o objeto 'rastreio' abaixo para clientes/<slug>/config.json e preencha o que estiver null ou entre <>. Os ids do Kommo saem do `rastreio.py levantar <slug>`. Webhooks e workflows são preenchidos pelo próprio script. Referência preenchida: o bloco rastreio de clientes/valeambientes/config.json.",
+  "rastreio": {
+    "_doc": "Skill rastreio-google-meta-kommo. Modelo em biblioteca/integrations/rastreio-google-meta-kommo/MODELO-ORIGEM-NO-KOMMO.md",
+    "kommo_api": "https://<subdominio>.kommo.com/api/v4",
+    "kommo_conta": null,
+    "supabase_url": "https://<project_ref>.supabase.co",
+    "webhook_base": "https://<host de webhook do n8n do cliente>/webhook",
+    "pipelines": [],
+    "campos_tracking": {
+      "UTM_SOURCE": null, "UTM_MEDIUM": null, "UTM_CAMPAIGN": null, "UTM_CONTENT": null, "UTM_TERM": null,
+      "GCLID": null, "FBCLID": null
+    },
+    "campo_origem_id": null,
+    "_campo_origem_doc": "Deixe null: `rastreio.py campo-origem <slug> --aplicar` cria o campo de lista 'Origem comprovada' no Kommo e preenche este id e os origem_enums. Com null, o rastreio grava só UTM e GCLID.",
+    "origem_enums": {},
+    "etapas": [],
+    "_etapas_doc": "Só no módulo 2 (volta da venda). Ex.: {pipeline_id, status_id, evento: 'venda', google_acao_id, meta_evento: 'Purchase', com_valor: true}",
+    "valor_max": null,
+    "janela_casamento_min": 30,
+    "espera_sessoes": true,
+    "lead_max_horas_antes": 48,
+    "teto_sem_lead": 10,
+    "error_workflow": null,
+    "meta_whatsapp_workflow": null,
+    "meta_whatsapp_credencial": null,
+    "credenciais": { "supabase": null, "kommo": null, "google": null, "meta": null },
+    "google": { "conta": null, "conta_login": null, "consentimento": null },
+    "meta": { "dataset_id": null, "waba_id": null, "test_event_code": null, "so_origem_meta": false },
+    "webhooks": {},
+    "workflows": {}
+  }
+}

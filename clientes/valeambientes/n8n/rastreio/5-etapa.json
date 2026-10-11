@@ -1,0 +1,269 @@
+{
+  "name": "[RASTREIO 5] Etapa do Kommo vira conversão | valeambientes",
+  "nodes": [
+    {
+      "id": "13e5adb3-87c9-484f-9ddd-726f0a29dcc0",
+      "name": "gatilho",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rastreio-etapa-valeambientes-f3caa11757eb",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "webhookId": "13e6d6bc-489f-48fd-a416-f4b7956e7098"
+    },
+    {
+      "id": "42a2de42-8b2e-4c62-ae4b-f0c81fccb578",
+      "name": "configuracoes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// [RASTREIO] Configuração do cliente valeambientes. GERADO por rastreio.py montar a partir do config.json:\n// mudou algo? edite o config.json e monte de novo, não edite aqui.\nreturn [{ json: {\n  \"cliente\": \"valeambientes\",\n  \"kommo_api\": \"https://reginaldovaleambientescombr.kommo.com/api/v4\",\n  \"kommo_conta\": 32040023,\n  \"pipelines\": [\n    12405720\n  ],\n  \"campos_tracking\": {\n    \"UTM_CONTENT\": 330516,\n    \"UTM_MEDIUM\": 330518,\n    \"UTM_CAMPAIGN\": 330520,\n    \"UTM_SOURCE\": 330522,\n    \"UTM_TERM\": 330524,\n    \"UTM_REFERRER\": 330526,\n    \"REFERRER\": 330528,\n    \"GCLIENTID\": 330530,\n    \"GCLID\": 330532,\n    \"FBCLID\": 330534\n  },\n  \"campo_origem_id\": null,\n  \"origem_enums\": {},\n  \"etapas_mapeadas\": [\n    \"12405720:95858036\",\n    \"12405720:95858040\",\n    \"12405720:142\"\n  ],\n  \"espera_sessoes\": true,\n  \"lead_max_horas_antes\": 48,\n  \"teto_sem_lead\": 10\n} }];\n"
+      }
+    },
+    {
+      "id": "17683965-e79b-476c-b528-331c100a7c7a",
+      "name": "extrai",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// [RASTREIO 5] Webhook status_lead do Kommo (chaves planas: body['leads[status][0][id]']).\n// Só segue o que está no mapa de etapas: o resto nem chega a gastar chamada no Kommo.\nconst cfg = $('configuracoes').first().json;\nconst mapa = new Set((cfg.etapas_mapeadas || []).map(String));\nconst out = [];\nfor (const it of $('gatilho').all()) {  // o gatilho, nao o $input: antes daqui roda o configuracoes\n  const b = it.json.body || {};\n  if (cfg.kommo_conta && String(b['account[id]']) !== String(cfg.kommo_conta)) continue;  // post forjado\n  for (let i = 0; i < 50; i++) {\n    const k = (campo) => b[`leads[status][${i}][${campo}]`];\n    if (k('id') === undefined) break;\n    const chave = `${k('pipeline_id')}:${k('status_id')}`;\n    if (!mapa.has(chave)) continue;\n    out.push({ json: {\n      lead_id: Number(k('id')), pipeline_id: Number(k('pipeline_id')), status_id: Number(k('status_id')),\n      status_anterior: Number(k('old_status_id')) || null, valor_webhook: k('price') ?? null,\n      ocorrido_em: new Date((Number(k('last_modified')) || Math.floor(Date.now() / 1000)) * 1000).toISOString(),\n      lead_url: `${cfg.kommo_api}/leads/${k('id')}?with=contacts`,\n    } });\n  }\n}\nreturn out;\n"
+      }
+    },
+    {
+      "id": "9f7618da-ee90-4369-8aca-b572cc98fa63",
+      "name": "le lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.lead_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          },
+          "batching": {
+            "batch": {
+              "batchSize": 5,
+              "batchInterval": 1000
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DfhIaL8GcP4nm2cu",
+          "name": "[RASTREIO] Kommo | valeambientes"
+        }
+      }
+    },
+    {
+      "id": "a18e11d7-b372-47ea-851c-d3b2a4fb2533",
+      "name": "contato",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// [RASTREIO 5] Lido o lead: guarda valor e rastreio do Kommo e monta o endereço do contato principal.\nfunction corpo(j) {\n  if (j.error) {\n    const m = String((j.error && j.error.message) || j.error);\n    if (/401|403|unauthori|forbidden|credential/i.test(m)) throw new Error('Kommo recusou a credencial: ' + m.slice(0, 200));\n    return null;\n  }\n  const st = Number(j.statusCode || 200);\n  if (st === 401 || st === 403) throw new Error('Kommo recusou a credencial (HTTP ' + st + ')');\n  if (st >= 400 || st === 204) return null;\n  let b = j.body !== undefined ? j.body : j.data;\n  if (typeof b === 'string') { if (!b.trim()) return null; b = JSON.parse(b); }\n  return b || null;\n}\nconst cfg = $('configuracoes').first().json;\nconst fontes = $('extrai').all();\nconst respostas = $input.all();\nif (fontes.length !== respostas.length) throw new Error(`pareamento quebrado: ${fontes.length} x ${respostas.length}`);\nconst t = cfg.campos_tracking || {};\nconst out = [];\nrespostas.forEach((it, i) => {\n  const r = fontes[i].json;\n  const lead = corpo(it.json);\n  if (!lead || !lead.id) return;  // lead apagado entre o webhook e a leitura: nada a enviar\n  const cf = {};\n  for (const f of (lead.custom_fields_values || [])) cf[f.field_id] = ((f.values || [])[0] || {}).value;\n  const contatos = ((lead._embedded || {}).contacts) || [];\n  const principal = contatos.find((c) => c.is_main) || contatos[0] || null;\n  out.push({ json: { ...r,\n    valor: lead.price ?? r.valor_webhook ?? null,\n    gclid: t.GCLID ? (cf[t.GCLID] || null) : null,\n    fbclid: t.FBCLID ? (cf[t.FBCLID] || null) : null,\n    // sem contato, relê o próprio lead: o monta acha zero telefone e o banco decide pelo clique\n    contato_url: principal ? `${cfg.kommo_api}/contacts/${principal.id}` : `${cfg.kommo_api}/leads/${lead.id}`,\n  } });\n});\nreturn out;\n"
+      }
+    },
+    {
+      "id": "8ecac388-111e-45fc-a7a9-cc27c2798ddc",
+      "name": "le contato",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.contato_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          },
+          "batching": {
+            "batch": {
+              "batchSize": 5,
+              "batchInterval": 1000
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 4,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "DfhIaL8GcP4nm2cu",
+          "name": "[RASTREIO] Kommo | valeambientes"
+        }
+      }
+    },
+    {
+      "id": "c6b3d5e0-1662-446b-9fe6-ae00245c5c0f",
+      "name": "monta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// [RASTREIO 5] Telefones e e-mails do contato vão CRUS para o banco; o hash é feito lá (rastreio_etapa).\nfunction corpo(j) {\n  if (j.error) {\n    const m = String((j.error && j.error.message) || j.error);\n    if (/401|403|unauthori|forbidden|credential/i.test(m)) throw new Error('Kommo recusou a credencial: ' + m.slice(0, 200));\n    return null;\n  }\n  const st = Number(j.statusCode || 200);\n  if (st === 401 || st === 403) throw new Error('Kommo recusou a credencial (HTTP ' + st + ')');\n  if (st >= 400 || st === 204) return null;\n  let b = j.body !== undefined ? j.body : j.data;\n  if (typeof b === 'string') { if (!b.trim()) return null; b = JSON.parse(b); }\n  return b || null;\n}\nconst fontes = $('contato').all();\nconst respostas = $input.all();\nif (fontes.length !== respostas.length) throw new Error(`pareamento quebrado: ${fontes.length} x ${respostas.length}`);\nconst out = [];\nrespostas.forEach((it, i) => {\n  const r = fontes[i].json;\n  const c = corpo(it.json) || {};\n  const valores = (code) => (c.custom_fields_values || []).filter((f) => f.field_code === code)\n    .flatMap((f) => (f.values || []).map((v) => String(v.value || '').trim())).filter(Boolean);\n  out.push({ json: { p: {\n    lead_id: r.lead_id, pipeline_id: r.pipeline_id, status_id: r.status_id, ocorrido_em: r.ocorrido_em,\n    valor: r.valor, gclid: r.gclid, fbclid: r.fbclid,\n    telefones: valores('PHONE').slice(0, 5), emails: valores('EMAIL').slice(0, 5),\n  } } });\n});\nreturn out;\n"
+      }
+    },
+    {
+      "id": "e604d6ba-b432-4533-b7fa-79ab67858ca4",
+      "name": "enfileira",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://awdxhenuyvsqsivvkycj.supabase.co/rest/v1/rpc/rastreio_etapa",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p: $json.p }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    }
+  ],
+  "connections": {
+    "gatilho": {
+      "main": [
+        [
+          {
+            "node": "configuracoes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "configuracoes": {
+      "main": [
+        [
+          {
+            "node": "extrai",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extrai": {
+      "main": [
+        [
+          {
+            "node": "le lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "le lead": {
+      "main": [
+        [
+          {
+            "node": "contato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "contato": {
+      "main": [
+        [
+          {
+            "node": "le contato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "le contato": {
+      "main": [
+        [
+          {
+            "node": "monta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "monta": {
+      "main": [
+        [
+          {
+            "node": "enfileira",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo",
+    "errorWorkflow": "EredNPgTvKpCDUmI"
+  }
+}

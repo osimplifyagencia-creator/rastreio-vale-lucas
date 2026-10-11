@@ -1,0 +1,200 @@
+{
+  "name": "[RASTREIO 6] Envio Google (Data Manager) | valeambientes",
+  "nodes": [
+    {
+      "id": "e5253598-9950-41fb-8fd5-eb6436a445f0",
+      "name": "gatilho",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "94bf9297-4f76-41b2-aa18-75523c553b28",
+      "name": "lote",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://awdxhenuyvsqsivvkycj.supabase.co/rest/v1/rpc/rastreio_lote",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ plataforma: 'google', limite: 200 }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "286c1d7d-b2cb-4474-9ed5-f8fc1765e759",
+      "name": "monta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// [RASTREIO 6] Lote da fila vira o corpo da Data Manager API (events:ingest), uma requisição por ação\n// de conversão. Desarmado = validateOnly: o Google confere tudo e não registra nada.\n// Um evento inválido derruba a requisição inteira: por isso o banco só entrega evento com identificador.\nconst lote = $input.first().json;\nconst itens = lote.itens || [];\nif (!itens.length) return [];\nconst conta = String(lote.google_conta || '').replace(/\\D/g, '');\nif (conta.length !== 10) throw new Error('google_conta precisa ter 10 digitos (rastreio_config)');\nconst login = String(lote.google_conta_login || '').replace(/\\D/g, '');\nconst porAcao = {};\nfor (const ev of itens) (porAcao[ev.destino] = porAcao[ev.destino] || []).push(ev);\nconst out = [];\nfor (const [acao, evs] of Object.entries(porAcao)) {\n  const destino = { operatingAccount: { accountType: 'GOOGLE_ADS', accountId: conta }, productDestinationId: String(acao) };\n  if (login) destino.loginAccount = { accountType: 'GOOGLE_ADS', accountId: login };\n  const events = evs.map((ev) => {\n    const ids = ev.identificadores || {};\n    const e = { transactionId: ev.event_id, eventTimestamp: new Date(ev.ocorrido_em).toISOString(),\n                eventSource: lote.google_fonte_evento || 'WEB' };\n    if (ids.gclid) e.adIdentifiers = { gclid: ids.gclid };\n    else if (ids.gbraid) e.adIdentifiers = { gbraid: ids.gbraid };\n    else if (ids.wbraid) e.adIdentifiers = { wbraid: ids.wbraid };\n    const u = [...(ids.telefones || []).map((h) => ({ phoneNumber: h })), ...(ids.emails || []).map((h) => ({ emailAddress: h }))];\n    if (u.length) e.userData = { userIdentifiers: u.slice(0, 10) };\n    if (ev.valor !== null && ev.valor !== undefined) { e.conversionValue = Number(ev.valor); e.currency = ev.moeda || 'BRL'; }\n    if (lote.google_consentimento) e.consent = { adUserData: lote.google_consentimento, adPersonalization: lote.google_consentimento };\n    return e;\n  });\n  out.push({ json: { ids: evs.map((e) => e.id), armado: !!lote.armado,\n    body: { destinations: [destino], encoding: 'HEX', events, validateOnly: !lote.armado } } });\n}\nreturn out;\n"
+      }
+    },
+    {
+      "id": "5919eb96-5ec2-489b-992b-e9770032aef3",
+      "name": "envia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://datamanager.googleapis.com/v1/events:ingest",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "76e999c0-d87c-43b3-9506-8098e7d5c370",
+      "name": "resultado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// [RASTREIO 6 e 7] Resposta do Google ou da Meta vira o estado de cada evento da fila.\n// 2xx: enviado (armado) ou ensaio_ok (desarmado). 4xx: recusado (não adianta repetir). 5xx e 429: erro (volta).\nconst fontes = $('monta').all();\nconst respostas = $input.all();\nif (fontes.length !== respostas.length) throw new Error(`pareamento quebrado: ${fontes.length} x ${respostas.length}`);\nconst out = [];\nrespostas.forEach((it, i) => {\n  const f = fontes[i].json;\n  const j = it.json || {};\n  let st = Number(j.statusCode || 0);\n  let corpo = j.body !== undefined ? j.body : j;\n  if (j.error && !st) {\n    const m = String((j.error && j.error.message) || j.error);\n    const n = m.match(/\\b(4\\d\\d|5\\d\\d)\\b/);\n    st = n ? Number(n[1]) : 599;\n    corpo = { erro: m.slice(0, 500) };\n  }\n  if (st === 401 || st === 403) throw new Error('plataforma recusou a credencial (HTTP ' + st + '): ' + JSON.stringify(corpo).slice(0, 300));\n  let estado;\n  if (st >= 200 && st < 300) estado = f.armado ? 'enviado' : 'ensaio_ok';\n  else if (st === 429 || st >= 500) estado = 'erro';\n  else estado = 'recusado';\n  out.push({ json: { p: { ids: f.ids, estado, motivo: estado === 'recusado' || estado === 'erro' ? 'http_' + st : null,\n    resposta: typeof corpo === 'string' ? { texto: corpo.slice(0, 2000) } : corpo } } });\n});\nreturn out;\n"
+      }
+    },
+    {
+      "id": "a62323ce-cf00-420f-8dcb-e097abe4cb54",
+      "name": "grava resultado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://awdxhenuyvsqsivvkycj.supabase.co/rest/v1/rpc/rastreio_resultado",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p: $json.p }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    }
+  ],
+  "connections": {
+    "gatilho": {
+      "main": [
+        [
+          {
+            "node": "lote",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "lote": {
+      "main": [
+        [
+          {
+            "node": "monta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "monta": {
+      "main": [
+        [
+          {
+            "node": "envia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "envia": {
+      "main": [
+        [
+          {
+            "node": "resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "resultado": {
+      "main": [
+        [
+          {
+            "node": "grava resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo",
+    "errorWorkflow": "EredNPgTvKpCDUmI"
+  }
+}
