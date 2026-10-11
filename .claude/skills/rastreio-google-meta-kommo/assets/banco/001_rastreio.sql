@@ -27,7 +27,8 @@ create table if not exists public.rastreio_config (
   google_conta_login      text,                            -- conta administradora, se o acesso passar por ela
   google_fonte_evento     text not null default 'WEB',
   google_consentimento    text,                            -- CONSENT_GRANTED / CONSENT_DENIED; nulo = não manda o campo
-  google_so_com_clique    boolean not null default true,   -- sem gclid/gbraid/wbraid e sem origem Google, não envia
+  google_so_com_clique    boolean not null default true,   -- sem gclid/gbraid/wbraid não envia. false só se a conta
+                                                           -- tiver conversões otimizadas para leads ligadas
   meta_armado             boolean not null default false,
   meta_test_event_code    text,                            -- desarmada e sem código de teste = nada sai
   meta_dataset_id         text,
@@ -387,8 +388,10 @@ begin
 
   -- Google
   if m.google_acao_id is not null then
-    if c.google_so_com_clique and gclid is null and gbraid is null and wbraid is null
-       and coalesce(origem, '') <> 'Google Ads' then
+    -- sem identificador de clique o Google só aceita o evento em conta com conversões otimizadas para leads;
+    -- nas outras recusa, e a recusa de um evento derruba a requisição inteira (medido em 11/10/2026).
+    -- A origem "Google Ads" vinda só da UTM não basta: tem de haver o clique.
+    if c.google_so_com_clique and gclid is null and gbraid is null and wbraid is null then
       motivo_g := 'sem_clique_do_google';
     elsif gclid is null and gbraid is null and wbraid is null and cardinality(ph_g) = 0 and cardinality(em) = 0 then
       motivo_g := 'sem_identificador';

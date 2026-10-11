@@ -86,8 +86,20 @@ def kommo_acesso(slug, cfg):
     sair("Kommo: token não achado nos .env do cliente (%s)" % ", ".join(c for c in cands if c))
 
 
+def chaves_apontadas(cfg):
+    """rastreio.chaves_em = {"VAR": "caminho/do/.env#NOME_LA"}: a chave continua morando no arquivo dela (a bancada
+    da casa usa as credenciais de empresa/). Nada é copiado e nenhum valor é impresso."""
+    out = {}
+    for var, onde in ((cfg.get("rastreio") or {}).get("chaves_em") or {}).items():
+        arq, _, nome = onde.partition("#")
+        v = ler_env(os.path.join(REPO, arq)).get(nome or var)
+        if v:
+            out[var] = v
+    return out
+
+
 def n8n_acesso(slug, cfg):
-    env = ler_env(os.path.join(REPO, "clientes", slug, "n8n", ".env"))
+    env = {**chaves_apontadas(cfg), **{k: v for k, v in ler_env(os.path.join(REPO, "clientes", slug, "n8n", ".env")).items() if v}}
     base = (env.get("N8N_BASE_URL") or (cfg.get("n8n") or {}).get("base_url") or "").rstrip("/")
     chave = env.get("N8N_API_KEY")
     if not base or not chave:
@@ -1009,7 +1021,7 @@ def env_rastreio(slug, criar_se_faltar=False):
     if not os.path.exists(arq) and criar_se_faltar:
         shutil.copyfile(MODELO_ENV, arq)
         print("criado clientes/%s/rastreio.env (fora do git): preencha e rode de novo" % slug)
-    return {k: v for k, v in ler_env(arq).items() if v}
+    return {**chaves_apontadas(cfg_cliente(slug)[1]), **{k: v for k, v in ler_env(arq).items() if v}}
 
 
 def n8n_credenciais(base, chave):
@@ -1102,8 +1114,24 @@ def plugar(slug, aplicar, so=None):
         anexar("supabase", "supabaseApi", "[RASTREIO] Supabase | %s" % slug, env.get("N8N_CRED_SUPABASE_ID"), supabase)
     if quer("meta"):
         anexar("meta", "httpHeaderAuth", "[RASTREIO] Meta CAPI | %s" % slug, env.get("N8N_CRED_META_ID"), meta)
+    def google():
+        cid, seg = env.get("GOOGLE_OAUTH_CLIENT_ID"), env.get("GOOGLE_OAUTH_CLIENT_SECRET")
+        if not cid or not seg:
+            return None
+        if not re.fullmatch(r"[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com", cid):
+            sair("Google: GOOGLE_OAUTH_CLIENT_ID fora do formato <número>-<letras>.apps.googleusercontent.com")
+        # a API cria a credencial, mas o token só existe depois do clique em Connect no editor (consentimento)
+        return {"grantType": "authorizationCode", "serverUrl": "",  # o esquema do n8n exige serverUrl mesmo sem uso
+                "authUrl": "https://accounts.google.com/o/oauth2/v2/auth", "accessTokenUrl": "https://oauth2.googleapis.com/token",
+                "clientId": cid, "clientSecret": seg, "scope": "https://www.googleapis.com/auth/datamanager",
+                "authQueryParameters": "access_type=offline&prompt=consent", "authentication": "body"}
+
     if quer("google"):
-        anexar("google", "oAuth2Api", "", env.get("N8N_CRED_GOOGLE_ID"), lambda: None)
+        tinha = bool(r["credenciais"].get("google"))
+        anexar("google", "oAuth2Api", "[RASTREIO] Google Data Manager | %s" % slug, env.get("N8N_CRED_GOOGLE_ID"), google)
+        if r["credenciais"].get("google") and not tinha:
+            print("  google   FALTA o Connect: abra %s/home/credentials/%s e clique em Connect com o login que enxerga a "
+                  "conta do Google Ads. Sem isso a credencial existe e não autentica." % (base, r["credenciais"]["google"]["id"]))
 
     # ids que não são segredo: vão do .env para o config (o montar e o SQL 002 leem de lá)
     novos = []

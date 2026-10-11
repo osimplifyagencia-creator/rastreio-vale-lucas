@@ -2,7 +2,7 @@
   "name": "[RASTREIO 6] Envio Google (Data Manager) | valeambientes",
   "nodes": [
     {
-      "id": "0363ff0c-e322-4011-8efd-9b2c48b9c1f7",
+      "id": "0340833f-fdf4-4504-9d38-636b2d73b08e",
       "name": "gatilho",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -22,7 +22,7 @@
       }
     },
     {
-      "id": "419d15c4-cee2-4c4b-818e-55739f3ba54f",
+      "id": "37cfeba4-2270-4219-9d69-301d8293f792",
       "name": "lote",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -51,7 +51,7 @@
       "waitBetweenTries": 2000
     },
     {
-      "id": "84b37aee-ff95-42f2-9f83-5f0841c7d7ad",
+      "id": "0f6a09f9-b7f6-4e7a-a4f3-ff569068a88a",
       "name": "monta",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -64,7 +64,7 @@
       }
     },
     {
-      "id": "5fb4310e-b728-4a23-889e-be672c11678b",
+      "id": "9e0866ee-f44b-4480-bea4-72162e7b2a95",
       "name": "envia",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -93,7 +93,7 @@
       "onError": "continueRegularOutput"
     },
     {
-      "id": "43d0d69c-8985-4089-b4aa-6fabd6d73487",
+      "id": "41fae653-df5b-4125-8b80-54b10bb7b40b",
       "name": "resultado",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -106,7 +106,7 @@
       }
     },
     {
-      "id": "d7b67a31-a3db-4952-9c78-6a33020ab694",
+      "id": "feccf3b3-a121-47f5-95c3-26272ad9264a",
       "name": "grava resultado",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,

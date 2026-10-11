@@ -125,6 +125,19 @@ begin
   r := public.rastreio_etapa('{"lead_id":1001,"pipeline_id":12405720,"status_id":95858036,"valor":999}');
   if (select valor from public.rastreio_eventos where event_id = '1001:qualificado' and plataforma = 'google') is not null then
     falhas := falhas + 1; raise notice 'F8i valor em etapa sem valor'; end if;
+  -- origem "Google Ads" só pela UTM, sem gclid (codificação automática desligada): o Google recusa o evento sem
+  -- clique com DESTINATION_ACCOUNT_NOT_ENABLED_ENHANCED_CONVERSIONS_FOR_LEADS e a recusa derruba o lote inteiro
+  insert into public.rastreio_leads (lead_id, origem, grau, utm_source, utm_medium) values (1009, 'Google Ads', 'A', 'google', 'cpc');
+  r := public.rastreio_etapa('{"lead_id":1009,"pipeline_id":12405720,"status_id":95858036,"telefones":["11955554444"]}');
+  if (r->>'google')::int <> 0 or r->>'motivo_google' <> 'sem_clique_do_google' or (r->>'meta')::int <> 1 then
+    falhas := falhas + 1; raise notice 'F8j google sem clique entrou na fila %', r; end if;
+  -- com a trava desligada (conta com conversões otimizadas para leads), o mesmo lead sai só com o telefone
+  update public.rastreio_config set google_so_com_clique = false where id = 1;
+  insert into public.rastreio_leads (lead_id, origem, grau) values (1010, 'Google Ads', 'A');
+  r := public.rastreio_etapa('{"lead_id":1010,"pipeline_id":12405720,"status_id":95858036,"telefones":["11944443333"]}');
+  if (r->>'google')::int <> 1 then falhas := falhas + 1; raise notice 'F8k trava desligada nao enfileirou %', r; end if;
+  update public.rastreio_eventos set estado = 'ignorado', motivo = 'prova' where lead_id in (1009, 1010);
+  update public.rastreio_config set google_so_com_clique = true where id = 1;
 
   -- 9. lote: meta desarmada e sem código de teste não entrega nada
   r := public.rastreio_lote('meta', 50);

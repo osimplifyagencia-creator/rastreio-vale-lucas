@@ -75,7 +75,16 @@ conta de serviço, troque a credencial do nó `envia` no editor depois de criar 
 - Até 2.000 eventos por requisição. Enviar em até 24 horas do clique rende mais.
 - `validateOnly: true` valida sem gravar: é o ensaio. O workflow manda assim enquanto `google_armado` for falso.
 - `consent` só vai se o cliente declarou o consentimento (`google.consentimento` no config). Não se inventa.
-- **Conferir no ensaio:** `eventSource` aceito para conversão vinda de CRM e o formato exato do erro por evento.
+- **Medido em 11/10/2026 contra a API real, com `validateOnly`:**
+  - `eventSource` é obrigatório (`REQUIRED_FIELD_MISSING` sem ele) e `WEB` é aceito.
+  - Evento com `gclid` (com `userData` junto e `consent` declarado) valida: HTTP 200 com `requestId`.
+  - Evento **só com telefone ou e-mail, sem `gclid`**, é recusado com
+    `DESTINATION_ACCOUNT_NOT_ENABLED_ENHANCED_CONVERSIONS_FOR_LEADS` se a conta não tiver "conversões otimizadas para
+    leads" ligadas (Metas, Configurações). A recusa derruba a requisição inteira: ou liga o recurso na conta, ou manda
+    ao Google só evento com identificador de clique.
+  - Ação inexistente: 404 `INVALID_CONVERSION_ACTION_ID`. Conta sem acesso: 403 `PERMISSION_DENIED` em `destinations[0]`.
+  - O erro vem em `error.details[]`, no item `google.rpc.BadRequest`, campo `fieldViolations[].reason`.
+- **Conferir ainda:** evento com `gclid` e sem `consent`.
 
 ## Depois de armar
 
