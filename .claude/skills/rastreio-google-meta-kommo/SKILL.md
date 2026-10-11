@@ -35,7 +35,8 @@ Todos os que escrevem em produção são secos por padrão: sem `--aplicar` (ou 
 
 | Comando | O que faz | Pronto quando |
 |---|---|---|
-| `R levantar <slug>` | só leitura: campos, funis e webhooks do Kommo; workflows e credenciais do n8n | terceiros e gatilhos do WhatsApp vistos |
+| `R novo <slug> --kommo <subdomínio> --n8n <url> --supabase <ref> [--webhook <base>]` | local: abre `clientes/<slug>/` de um cliente novo (config, `.env` vazios, `PROMPTS.md`). Roteiro em `NOVO-CLIENTE.md` | pasta criada, nada sobrescrito |
+| `R levantar <slug> [--gravar]` | só leitura: campos, funis e webhooks do Kommo; workflows e credenciais do n8n. Com `--gravar`, preenche no config o que estava vazio (conta, campos, funil, proposta de etapas, gatilho do WhatsApp) | `config.rastreio: completo para montar` |
 | `R plugar <slug> [--aplicar] [--so kommo,supabase,google,meta]` | lê `clientes/<slug>/rastreio.env`, prova cada chave numa chamada real, cria a credencial no n8n, grava ids no config | `módulo 1: credenciais prontas` |
 | `R banco <slug> [--aplicar]` | passa o SQL num Postgres descartável e aplica o 001 e o 002 pela API de gestão do Supabase | saúde responde, `armado: False` |
 | `R campo-origem <slug> [--aplicar]` | cria no Kommo o campo de lista "Origem comprovada" (Google Ads, Meta Ads, Site) | ids no config |

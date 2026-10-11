@@ -17,6 +17,9 @@
 
 Plataformas ligadas: Kommo, n8n, Supabase, Google Ads e Meta Ads. As chaves das 5 estão na Parte 1.
 
+Outro cliente: o mesmo projeto serve. O `NOVO-CLIENTE.md` tem os 3 passos (um comando abre a pasta do cliente,
+você cola as chaves e manda os prompts).
+
 Cuidados:
 - O projeto tem o endereço dos webhooks. Não repasse em grupo.
 - A chave do n8n enxerga outros workflows da instância. Mexa só no que começa com `[RASTREIO]`.

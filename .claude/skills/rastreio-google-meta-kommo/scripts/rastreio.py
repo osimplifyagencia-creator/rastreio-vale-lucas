@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 """Rastreio Google + Meta -> Kommo -> volta para as plataformas. Montador da skill rastreio-google-meta-kommo.
 
-    python rastreio.py levantar <slug>                 # SÓ LEITURA: Kommo (campos, funis, webhooks) e n8n
+    python rastreio.py novo <slug> --kommo <subdomínio> --n8n <url> --supabase <ref> [--webhook <base>]
+                                                       # local: abre clientes/<slug>/ (config, .env vazios, PROMPTS.md)
+    python rastreio.py levantar <slug> [--gravar]      # SÓ LEITURA: Kommo (campos, funis, webhooks) e n8n.
+                                                       # --gravar preenche no config o que estava vazio
     python rastreio.py montar   <slug>                 # local: gera os workflows e o SQL de config do cliente
     python rastreio.py criar    <slug> [--aplicar] [--sem-credencial] [--modulo 1]
     python rastreio.py ligar-meta <slug> [--aplicar]   # pendura o [RASTREIO 3] no gatilho do WhatsApp que já existe
@@ -144,13 +147,70 @@ CODIGOS_TRACKING = ["UTM_SOURCE", "UTM_MEDIUM", "UTM_CAMPAIGN", "UTM_CONTENT", "
                     "REFERRER", "GCLID", "FBCLID", "GCLIENTID"]
 
 
-def levantar(slug):
+MAPA_PADRAO = (  # (evento, evento da Meta, leva valor, como a etapa costuma se chamar)
+    ("qualificado", "QualifiedLead", False, r"qualific|interess"),
+    ("orcamento", "InitiateCheckout", False, r"or[cç]amento|proposta"),
+)
+
+
+def gravar_levantamento(slug, achado):
+    """Preenche no config só o que está VAZIO, com o que o levantar mediu. O mapa de etapas sai como proposta."""
+    caminho, cfg = cfg_cliente(slug)
+    r = cfg.setdefault("rastreio", {})
+    feito = []
+
+    def poe(chave, valor, onde=None):
+        onde = r if onde is None else onde
+        if valor and not onde.get(chave):
+            onde[chave] = valor
+            feito.append("%s = %s" % (chave, json.dumps(valor, ensure_ascii=False)[:120]))
+
+    poe("kommo_conta", achado.get("conta"))
+    ct = r.setdefault("campos_tracking", {})
+    for cod, i in (achado.get("campos") or {}).items():
+        poe(cod, i, ct)
+    funis = achado.get("funis") or []
+    principal = next((p for p in funis if p.get("is_main")), funis[0] if funis else None)
+    if principal:
+        poe("pipelines", [principal["id"]])
+    if principal and not r.get("etapas") and principal["id"] in (r.get("pipelines") or []):
+        etapas = []
+        for evento, meta_evento, com_valor, cara in MAPA_PADRAO:
+            s = next((s for s in principal["_embedded"]["statuses"] if re.search(cara, s["name"], re.I)), None)
+            if s:
+                etapas.append({"pipeline_id": principal["id"], "status_id": s["id"], "evento": evento, "google_acao_id": None,
+                               "meta_evento": meta_evento, "com_valor": com_valor, "nome": s["name"]})
+        # 142 é a etapa de ganho em todo funil do Kommo
+        etapas.append({"pipeline_id": principal["id"], "status_id": 142, "evento": "venda", "google_acao_id": None,
+                       "meta_evento": "Purchase", "com_valor": True, "nome": "Ganho"})
+        poe("etapas", etapas)
+    gat = achado.get("gatilhos")
+    if gat is not None and not r.get("meta_whatsapp_workflow"):
+        if len(gat) == 1:
+            poe("meta_whatsapp_workflow", gat[0][0])
+            poe("meta_whatsapp_credencial", gat[0][1])
+        else:
+            print("gatilho do WhatsApp: achei %d, não escolho sozinho. Preencha rastreio.meta_whatsapp_workflow e "
+                  "meta_whatsapp_credencial: %s" % (len(gat), "; ".join("%s (credencial %r)" % g for g in gat) or "nenhum"))
+    if feito:
+        gravar_cfg(caminho, cfg)
+    print("\n== gravado no config.json (só o que estava vazio): " + ("nada" if not feito else ""))
+    for f in feito:
+        print("  " + f)
+    if any(f.startswith("etapas") for f in feito):
+        print("  o mapa de etapas é PROPOSTA pelo nome da etapa: confira antes de montar.")
+    falta = [k for k in OBRIGATORIOS + ("webhook_base",) if not r.get(k)]
+    print("config.rastreio: " + ("completo para montar" if not falta else "falta " + ", ".join(falta)))
+
+
+def levantar(slug, gravar=False):
     _, cfg = cfg_cliente(slug)
     r = cfg.get("rastreio") or {}
     api, tok = kommo_acesso(slug, cfg)
     print("== Kommo", api.split("/api")[0])
     conta = kommo_get(api, tok, "/account") or {}
     print("conta", conta.get("id"), "| config diz", (cfg.get("kommo") or {}).get("account_id"))
+    achado = {"conta": conta.get("id")}
 
     campos, pag = [], 1
     while True:
@@ -162,6 +222,7 @@ def levantar(slug):
             break
         pag += 1
     por_codigo = {c.get("code"): c for c in campos if c.get("code")}
+    achado["campos"] = {cod: por_codigo[cod]["id"] for cod in CODIGOS_TRACKING if cod in por_codigo}
     print("\ncampos de rastreio (código -> id):")
     for cod in CODIGOS_TRACKING:
         c = por_codigo.get(cod)
@@ -175,6 +236,7 @@ def levantar(slug):
 
     print("\nfunis e etapas:")
     b = kommo_get(api, tok, "/leads/pipelines") or {"_embedded": {"pipelines": []}}
+    achado["funis"] = b["_embedded"]["pipelines"]
     for p in b["_embedded"]["pipelines"]:
         print("  %s %s%s" % (p["id"], p["name"], "  (principal)" if p.get("is_main") else ""))
         for s in p["_embedded"]["statuses"]:
@@ -195,11 +257,14 @@ def levantar(slug):
         base, chave = n8n_acesso(slug, cfg)
     except SystemExit as e:
         print("\n== n8n: pulado (%s)" % e)
+        if gravar:
+            gravar_levantamento(slug, achado)
         return
     print("\n== n8n", base)
     wfs = n8n_todos(base, chave)
     origem_id = str(r.get("campo_origem_id") or "")
     creds = {}
+    achado["gatilhos"] = []
     for w in wfs:
         full = n8n(base, chave, "GET", "/workflows/" + w["id"])
         txt = json.dumps(full)
@@ -207,6 +272,8 @@ def levantar(slug):
         marca = []
         if any(t.endswith("whatsAppTrigger") for t in tipos):
             marca.append("GATILHO WHATSAPP (callback da Meta: não duplicar)")
+            achado["gatilhos"] += [(w["id"], (n.get("credentials") or {}).get("whatsAppTriggerApi", {}).get("name"))
+                                   for n in full["nodes"] if n["type"].endswith("whatsAppTrigger")]
         if origem_id and origem_id in txt:
             marca.append("escreve/lê o campo de origem %s" % origem_id)
         if re.search(r"gclid|fbclid|utm_", txt, re.I):
@@ -227,6 +294,63 @@ def levantar(slug):
     print("\nconfig.rastreio: " + ("completo para montar" if not falta else "falta " + ", ".join(falta)))
     if not r.get("campo_origem_id"):
         print("sem campo_origem_id: o módulo 1 grava só UTM e GCLID. `campo-origem %s` cria o 'Origem comprovada'." % slug)
+    if gravar:
+        gravar_levantamento(slug, achado)
+
+
+# ------------------------------------------------------------------ novo (local: abre a pasta de um cliente)
+
+def novo(slug, a):
+    """Cria clientes/<slug>/ pronto para receber as chaves: config.json com o bloco rastreio, os .env vazios,
+    o histórico e a sequência de prompts. Não chama rede e não sobrescreve o que já existe."""
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]{1,40}", slug):
+        sair("slug só com minúsculas, número e hífen: %r" % slug)
+    kommo, n8n_base, sup = opcao(a, "--kommo"), (opcao(a, "--n8n") or "").rstrip("/"), opcao(a, "--supabase")
+    if not (kommo and n8n_base and sup):
+        sair("uso: novo <slug> --kommo <subdomínio> --n8n <https://n8n.do-cliente> --supabase <ref ou url> [--webhook <base>]")
+    dominio = re.sub(r"^https?://|/.*$", "", kommo)
+    dominio += "" if "." in dominio else ".kommo.com"
+    ref = re.sub(r"^https?://|\.supabase\.co.*$", "", sup)
+    if not re.fullmatch(r"[a-z0-9]{15,30}", ref):
+        sair("--supabase: esperava o ref do projeto ou https://<ref>.supabase.co, veio %r" % sup)
+    if not n8n_base.startswith("https://"):
+        sair("--n8n: esperava a URL com https://, veio %r" % n8n_base)
+    cli = os.path.join(REPO, "clientes", slug)
+    caminho = os.path.join(cli, "config.json")
+    cfg = json.load(io.open(caminho, encoding="utf-8")) if os.path.exists(caminho) else {"cliente": slug}
+    if cfg.get("rastreio"):
+        sair("clientes/%s/config.json já tem o bloco rastreio: nada a criar (siga pelo levantar)" % slug)
+    ficha = json.load(io.open(os.path.join(SKILL, "assets", "ficha-config.json"), encoding="utf-8"))["rastreio"]
+    r = {k: v for k, v in ficha.items() if not k.startswith("_")}
+    r.update(kommo_api="https://%s/api/v4" % dominio, supabase_url="https://%s.supabase.co" % ref,
+             webhook_base=(opcao(a, "--webhook") or n8n_base + "/webhook").rstrip("/"), campos_tracking={})
+    cfg.setdefault("kommo", {}).setdefault("domain", dominio)
+    cfg["kommo"].setdefault("env_file", "clientes/%s/.env" % slug)
+    cfg.setdefault("n8n", {}).setdefault("base_url", n8n_base)
+    cfg["rastreio"] = r
+    os.makedirs(os.path.join(cli, "n8n"), exist_ok=True)
+    gravar_cfg(caminho, cfg)
+    criados = ["config.json"]
+
+    def se_falta(rel, txt):
+        p = os.path.join(cli, rel)
+        if not os.path.exists(p):
+            io.open(p, "w", encoding="utf-8", newline="\n").write(txt)
+            criados.append(rel.replace("\\", "/"))
+
+    env_kommo = os.path.relpath(os.path.join(REPO, cfg["kommo"]["env_file"]), cli)
+    se_falta(env_kommo, "# Kommo: token de longa duração da integração privada. Só o valor depois do =, sem aspas.\n"
+                        "KOMMO_TOKEN=\nDOMAIN=%s\n" % dominio)
+    se_falta(os.path.join("n8n", ".env"), "# n8n do cliente: Settings > n8n API > Create an API key.\nN8N_BASE_URL=%s\nN8N_API_KEY=\n" % n8n_base)
+    se_falta("rastreio.env", io.open(MODELO_ENV, encoding="utf-8").read())
+    se_falta("historico.md", "# Histórico: %s\n\nUma linha por fase fechada: data, o que foi feito, a prova.\n" % slug)
+    modelo = next((p for p in (os.path.join(SKILL, "assets", "PROMPTS.modelo.md"), os.path.join(SKILL, "assets", "pacote", "PROMPTS.md"))
+                   if os.path.exists(p)), None)
+    if modelo:
+        se_falta("PROMPTS.md", io.open(modelo, encoding="utf-8").read().replace("{{SLUG}}", slug))
+    print("cliente %s aberto em clientes/%s/: %s" % (slug, slug, ", ".join(criados)))
+    print("webhook_base = %s (se o n8n do cliente usa outro host para webhook, corrija no config)" % r["webhook_base"])
+    print("próximo: cole as chaves nos 3 arquivos .env e rode `levantar %s --gravar`" % slug)
 
 
 # ------------------------------------------------------------------ montar (local)
@@ -1063,9 +1187,12 @@ def banco(slug, aplicar):
 
 if __name__ == "__main__":
     a = sys.argv[1:]
-    if len(a) < 2 or a[0] not in ("levantar", "montar", "criar", "ligar-meta", "campo-origem", "testar", "plugar", "banco"):
+    if len(a) < 2 or a[0] not in ("novo", "levantar", "montar", "criar", "ligar-meta", "campo-origem", "testar", "plugar", "banco"):
         sair(__doc__)
     cmd, slug = a[0], a[1]
+    if cmd == "novo":
+        novo(slug, a)
+        sys.exit(0)
     if cmd == "plugar":
         so = opcao(a, "--so")
         plugar(slug, "--aplicar" in a, set(so.split(",")) if so else None)
@@ -1074,7 +1201,7 @@ if __name__ == "__main__":
         banco(slug, "--aplicar" in a)
         sys.exit(0)
     if cmd == "levantar":
-        levantar(slug)
+        levantar(slug, "--gravar" in a)
     elif cmd == "montar":
         montar(slug)
     elif cmd == "criar":
