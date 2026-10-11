@@ -2,7 +2,7 @@
   "name": "[RASTREIO 5] Etapa do Kommo vira conversão | valeambientes",
   "nodes": [
     {
-      "id": "378bb71c-eaa6-4797-ac84-cb05cc9ede2b",
+      "id": "0fdbe301-624e-4cfb-a4c0-8b49723da23a",
       "name": "gatilho",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -16,10 +16,10 @@
         "responseMode": "onReceived",
         "options": {}
       },
-      "webhookId": "92a0dbf4-40c7-4d84-b511-9eafe0c08190"
+      "webhookId": "80c12cf7-e18b-45af-87ad-d5e2348026a1"
     },
     {
-      "id": "91d62b3d-629e-41cb-84ce-97e3f0056343",
+      "id": "321329f2-23cd-40d8-8a26-83504cf2b39c",
       "name": "configuracoes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -32,7 +32,7 @@
       }
     },
     {
-      "id": "3544a4bf-4aad-42c2-b3c1-b56672135089",
+      "id": "ca984ad7-4aa1-4e27-8532-5efa2539fc6d",
       "name": "extrai",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -45,7 +45,7 @@
       }
     },
     {
-      "id": "609e95b4-e5ed-466a-a766-6df2fe91ccd6",
+      "id": "f3d3b252-64b6-4347-8939-4717aef8cdc1",
       "name": "le lead",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -86,7 +86,7 @@
       }
     },
     {
-      "id": "eca77729-7832-4b27-ae3f-b78d41538980",
+      "id": "1397b993-fa7f-4d1d-bd9e-1029bd5b8ccc",
       "name": "contato",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -99,7 +99,7 @@
       }
     },
     {
-      "id": "2e3b3872-4920-4c6b-814f-4344241d96ec",
+      "id": "6f205a94-8934-4310-8c5f-623640d756e4",
       "name": "le contato",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -140,7 +140,7 @@
       }
     },
     {
-      "id": "6ee2ba95-804b-4985-bce4-e7a3c566c805",
+      "id": "141ad1e8-91d2-4d36-9c6f-4780df15e823",
       "name": "monta",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -153,7 +153,7 @@
       }
     },
     {
-      "id": "cdceecdf-5098-461d-af65-f1e134a93e89",
+      "id": "4b0fd5d2-2abe-44df-a0eb-1cc515649578",
       "name": "enfileira",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,

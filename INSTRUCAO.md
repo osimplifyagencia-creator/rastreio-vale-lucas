@@ -8,8 +8,8 @@
    Faça uma cópia de cada um, no mesmo lugar, tirando o `.exemplo` do nome.
 5. Abra o `OPERACAO.md`. A Parte 1 lista cada chave, onde pegar e em qual arquivo colar. Cole só o valor depois do `=`.
    Nunca cole chave no chat da IA e nunca faça commit de chave.
-6. Com as chaves nos arquivos, copie a Parte 2 do `OPERACAO.md` (o bloco de texto inteiro) e mande como primeira
-   mensagem para a IA.
+6. Com as chaves nos arquivos, abra o `PROMPTS.md` e mande os prompts na ordem, um de cada vez, esperando o
+   `FECHADA` de cada etapa. Quem preferir tudo de uma vez usa a Parte 2 do `OPERACAO.md` como mensagem única.
 7. A IA roda cada passo em seco, confere e aplica sozinha: credenciais, banco, campo, os 8 workflows ativados,
    webhooks e a prova com um lead `[QA]`. Ela só para se uma prova falhar ou faltar chave.
 8. No fim ela devolve um resumo (Resultado, Prova, Não feito ou risco) e pergunta se pode armar. Leia o ensaio do

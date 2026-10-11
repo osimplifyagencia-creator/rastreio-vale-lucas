@@ -2,7 +2,7 @@
   "name": "[RASTREIO 8] Saúde diária | valeambientes",
   "nodes": [
     {
-      "id": "86ee39fd-f667-4ed6-b97d-b62963194e1d",
+      "id": "b505216a-6d92-419f-9051-8537cad832dc",
       "name": "gatilho",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -23,7 +23,7 @@
       }
     },
     {
-      "id": "e4b9038e-7a6d-4cd6-a4ae-880f6cc08a44",
+      "id": "ca5ec611-375f-4107-b8cf-d33fc599b9b2",
       "name": "configuracoes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -36,7 +36,7 @@
       }
     },
     {
-      "id": "9f40de95-7c58-475b-b9e1-8dcf6c608e71",
+      "id": "24e3490f-0b49-4a1e-85aa-10ef913de9bc",
       "name": "saude",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -65,7 +65,7 @@
       "waitBetweenTries": 2000
     },
     {
-      "id": "ca2d998d-aaaf-46f4-bf24-f80ed1123059",
+      "id": "ce9e3c99-8009-4af8-a951-1f5603a2af8b",
       "name": "avalia",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -78,7 +78,7 @@
       }
     },
     {
-      "id": "4a08c3e4-f064-4877-97e4-c111f6e63fa5",
+      "id": "75466958-6b03-487a-8564-67fc6bfec41a",
       "name": "tem alerta?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -96,7 +96,7 @@
           },
           "conditions": [
             {
-              "id": "54a64eed-d1f0-45f4-89a3-8f0a33b797ef",
+              "id": "6ea5de23-6922-45fb-9c66-906f3c4ccf34",
               "leftValue": "={{ $json.tem_alerta }}",
               "rightValue": "",
               "operator": {
@@ -113,7 +113,7 @@
       }
     },
     {
-      "id": "712f1c65-a788-4eb2-bcd7-f5b48d42f3c0",
+      "id": "17494e0c-834f-44d4-956a-71799a97cdbb",
       "name": "avisa",
       "type": "n8n-nodes-base.stopAndError",
       "typeVersion": 1,
