@@ -10,10 +10,14 @@
    Nunca cole chave no chat da IA e nunca faça commit de chave.
 6. Com as chaves nos arquivos, copie a Parte 2 do `OPERACAO.md` (o bloco de texto inteiro) e mande como primeira
    mensagem para a IA.
-7. A IA roda cada passo primeiro em seco e mostra o que faria. Só diga "pode aplicar" depois de ler.
-8. No fim de cada fase ela devolve Resultado, Prova, Não feito ou risco e Próximo passo. Mande esse resumo de volta.
+7. A IA roda cada passo em seco, confere e aplica sozinha: credenciais, banco, campo, os 8 workflows ativados,
+   webhooks e a prova com um lead `[QA]`. Ela só para se uma prova falhar ou faltar chave.
+8. No fim ela devolve um resumo (Resultado, Prova, Não feito ou risco) e pergunta se pode armar. Leia o ensaio do
+   Google Ads e da Meta Ads antes de responder "pode armar": é aí que a conversão passa a ser real.
+
+Plataformas ligadas: Kommo, n8n, Supabase, Google Ads e Meta Ads. As chaves das 5 estão na Parte 1.
 
 Cuidados:
-- O projeto tem o endereço dos webhooks. Não repasse em grupo nem deixe o repositório público.
+- O projeto tem o endereço dos webhooks. Não repasse em grupo.
 - A chave do n8n enxerga outros workflows da instância. Mexa só no que começa com `[RASTREIO]`.
-- Nada é armado: os workflows nascem desligados e o envio de conversão fica em modo de ensaio até o dono liberar.
+- Até o "pode armar", o envio de conversão fica em modo de ensaio: nada chega de verdade nas contas de anúncio.

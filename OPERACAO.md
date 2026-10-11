@@ -1,19 +1,26 @@
 # Operação: rastreio Google e Meta até o Kommo (valeambientes)
 
-Gerado em 10/10/2026. Este arquivo tem duas partes. A Parte 1 é para você, que vai coletar as chaves. A Parte 2 é
+Gerado em 11/10/2026. Este arquivo tem duas partes. A Parte 1 é para você, que vai coletar as chaves. A Parte 2 é
 o roteiro que você entrega para a sua IA quando as chaves estiverem nos arquivos.
 
-O resultado final: cada lead do Kommo com a origem provada (GCLID, UTMs, anúncio da Meta e o campo "Origem
-comprovada") e, numa segunda etapa, a venda do Kommo voltando como conversão para o Google Ads e para a Meta.
+O resultado final, numa operação só, com as 5 plataformas ligadas:
+
+| Plataforma | Papel |
+|---|---|
+| Kommo | recebe a origem provada em cada lead (GCLID, UTMs, anúncio da Meta, campo "Origem comprovada") e avisa quando o lead muda de etapa |
+| n8n | roda os 8 workflows `[RASTREIO]` que ligam tudo |
+| Supabase | guarda sessões, cliques, eventos, a fila de envio e a saúde |
+| Google Ads | recebe a etapa do Kommo como conversão (Data Manager API) |
+| Meta Ads | entrega o anúncio de origem da conversa e recebe a etapa como conversão (Conversions API) |
 
 ---
 
 ## Parte 1: o que coletar
 
 Cole cada valor no arquivo indicado, depois do `=`, sem aspas. **Nunca no chat com a IA, nunca neste arquivo.**
-Marque a coluna "Tenho" à mão para acompanhar.
+Marque a coluna "Tenho" à mão para acompanhar. A operação completa pede as chaves das 5 plataformas.
 
-### Módulo 1: origem no Kommo (já funciona só com isto)
+### Kommo, n8n e Supabase
 
 | Tenho | Chave | Onde pegar | Onde colar |
 |---|---|---|---|
@@ -25,7 +32,7 @@ Marque a coluna "Tenho" à mão para acompanhar.
 
 Sem o `SUPABASE_ACCESS_TOKEN` a operação ainda sai: a IA entrega os 2 arquivos SQL para colar no SQL Editor.
 
-### Módulo 2: venda de volta ao Google Ads
+### Google Ads
 
 | Tenho | Chave | Onde pegar | Onde colar |
 |---|---|---|---|
@@ -39,7 +46,7 @@ Sem o `SUPABASE_ACCESS_TOKEN` a operação ainda sai: a IA entrega os 2 arquivos
 Cada ação de conversão é criada no Google Ads em Metas, Conversões, Nova ação, **Importar, Acompanhar conversões
 de cliques**. O id aparece na URL da ação (`ctId=`). Sem o id, aquele evento não é enviado.
 
-### Módulo 2: venda de volta à Meta
+### Meta Ads
 
 | Tenho | Chave | Onde pegar | Onde colar |
 |---|---|---|---|
@@ -55,10 +62,10 @@ outro gerenciador volta erro 100. Passo a passo na skill `meta-acessos`.
 
 | Tenho | Pergunta | Por quê |
 |---|---|---|
-| [ ] | A OneClickAds já manda conversão do Kommo para a Meta? | O Kommo tem um webhook dela em mudança de etapa. Dois remetentes contam a venda em dobro: escolher um só |
 | [ ] | Dá para colar um `<script>` no `<head>` do site e o botão do WhatsApp é um link `wa.me` ou `api.whatsapp.com`? | A etiqueta da página é a ponte do Google: sem ela o clique do Google chega no Kommo sem prova |
 | [ ] | A regra do Kommo que lê a frase da primeira mensagem está em "contém" e não em "igual a"? | A etiqueta acrescenta um código de 5 letras no fim da frase; com "igual a" a regra para de casar |
 | [ ] | As etapas do funil abaixo são mesmo as que viram conversão? | É o mapa que decide o que vai para o Google e para a Meta |
+
 
 Mapa de etapas proposto (no `config.json`, bloco `rastreio.etapas`):
 
@@ -75,15 +82,26 @@ Mapa de etapas proposto (no `config.json`, bloco `rastreio.etapas`):
 Copie daqui até o fim do arquivo e mande como primeira mensagem, com esta pasta aberta como projeto.
 
 ```text
-Você vai operar o rastreio de origem do cliente valeambientes neste projeto. Leia o CLAUDE.md da raiz e carregue a
-skill rastreio-google-meta-kommo antes de qualquer comando. As chaves já estão nos arquivos .env de
-clientes/valeambientes/ (não leia nem imprima esses arquivos: os scripts leem sozinhos).
+Você vai colocar no ar o rastreio do cliente valeambientes neste projeto, de ponta a ponta, ligando 5 plataformas:
+Kommo, n8n, Supabase, Google Ads e Meta Ads. Leia o CLAUDE.md da raiz e carregue a skill
+rastreio-google-meta-kommo antes de qualquer comando. Para cada plataforma há uma skill de apoio: n8n-pela-api,
+kommo-pela-api, meta-acessos e google-ads-conversoes. As chaves já estão nos arquivos .env de clientes/valeambientes/
+(não leia nem imprima esses arquivos: os scripts leem sozinhos).
 
 Atalho: R = python .claude/skills/rastreio-google-meta-kommo/scripts/rastreio.py
 
-Regra de ouro: todo comando que escreve em produção roda PRIMEIRO em seco (sem --aplicar ou --enviar). Mostre
-a saída, espere o meu ok e só então aplique. Depois de cada passo, mostre a prova pedida. Se uma prova falhar,
-pare e me mostre a saída: não tente contornar.
+Autorização: você tem o meu ok para aplicar em produção da FASE 0 até a FASE 8, sem parar entre as fases. Em
+cada passo rode PRIMEIRO em seco (sem --aplicar ou --enviar), confira a saída e, se não houver erro, rode em
+seguida aplicando, sem me perguntar. Isso inclui criar credencial no n8n, criar campo e webhook no Kommo, aplicar
+o banco no Supabase, criar e ATIVAR os 8 workflows e mandar evento de ensaio para o Google Ads e para a Meta.
+
+Pare e me mostre a saída somente se:
+- uma prova falhar ou um comando devolver erro (não contorne);
+- faltar uma chave (diga qual e em qual arquivo ela vai);
+- o passo tocar em workflow, webhook ou campo que não seja do rastreio. No n8n, mexa só no que começa com
+  [RASTREIO], mais o único nó que o ligar-meta acrescenta.
+
+A única coisa que espera a minha palavra é a FASE 9 (armar o envio real de conversão).
 
 FASE 0. Ambiente
 - python --version (3.10+), node --version (20+), npm install na raiz.
@@ -92,63 +110,75 @@ FASE 0. Ambiente
 
 FASE 1. Levantar (só leitura)
 - R levantar valeambientes
-- Me mostre: campos de UTM e GCLID, funis, webhooks do Kommo que apontam para fora do n8n do cliente (terceiro
-  que recebe status_lead pode já estar mandando conversão) e os workflows com gatilho do WhatsApp.
+- Guarde para o resumo: campos de UTM e GCLID, funis, webhooks do Kommo e os workflows com gatilho do WhatsApp.
 
-FASE 2. Credenciais (portão: nada de workflow antes disto)
+FASE 2. Credenciais das 5 plataformas (portão: nada de workflow antes disto)
 - R plugar valeambientes            -> seco: diz o que cria e o que falta
-- R plugar valeambientes --aplicar  -> prova cada chave numa chamada real, cria a credencial no n8n, grava o id no config
-- Pronto quando: "módulo 1 (origem no Kommo): credenciais prontas".
+- R plugar valeambientes --aplicar  -> prova cada chave numa chamada real (Kommo, Supabase, Google Ads, Meta), cria as
+  credenciais no n8n e grava os ids no config
+- Pronto quando aparecem as duas linhas: "módulo 1 (origem no Kommo): credenciais prontas" e "módulo 2 (volta da
+  venda): credenciais prontas". Se só a primeira aparecer, me diga quais chaves do Google ou da Meta faltam e siga
+  com o que dá: nas fases 4 e 5 use "R criar valeambientes --modulo 1" e ative só 1, 2, 4 e 8.
 
-FASE 3. Banco
-- R banco valeambientes             -> seco
-- R banco valeambientes --aplicar   -> passa na prova local e aplica o 001 e o 002 no Supabase do cliente
-- Pronto quando: a saúde responde e "armado: False". Sem SUPABASE_ACCESS_TOKEN: me entregue o caminho dos 2
-  arquivos SQL, na ordem, para eu colar no SQL Editor, e confira depois com select public.rastreio_saude();
-
-FASE 4. Campo "Origem comprovada" no Kommo
+FASE 3. Kommo: campo "Origem comprovada"
 - R campo-origem valeambientes  e depois  --aplicar
 - Pronto quando: campo_origem_id e origem_enums aparecem no config.
 
-FASE 5. Montar e criar os workflows (desligados)
-- R montar valeambientes                        -> "MONTAGEM workflows=8 erros=0", sem "sem credencial" no 1, 2, 3, 4 e 8
+FASE 4. Montar os workflows e aplicar o banco no Supabase
+- R montar valeambientes                        -> "MONTAGEM workflows=8 erros=0", sem nenhum "sem credencial"
 - node .claude/skills/rastreio-google-meta-kommo/assets/n8n/provar_testar.mjs clientes/valeambientes/n8n/rastreio python .claude/skills/rastreio-google-meta-kommo/scripts/rastreio.py valeambientes   -> "PROVA_TESTAR falhas=0"
-- R criar valeambientes --modulo 1              -> seco
-- R criar valeambientes --modulo 1 --aplicar    -> cria 1, 2, 3, 4 e 8 desligados; ids em rastreio.workflows
+- R banco valeambientes  e depois  --aplicar    -> passa na prova local e aplica o 001 e o 002 (conta do Google, conjunto
+  de dados da Meta e mapa de etapas) no Supabase do cliente
+- Pronto quando: a saúde responde e "armado: False". Sem SUPABASE_ACCESS_TOKEN: me entregue o caminho dos 2
+  arquivos SQL, na ordem, para eu colar no SQL Editor, e confira depois com select public.rastreio_saude();
+
+FASE 5. n8n: criar e ativar os 8 workflows
+- R criar valeambientes  e depois  --aplicar    -> cria os 8 desligados; ids em rastreio.workflows
+- Ative pela API do n8n (skill n8n-pela-api): 1, 2, 4, 5, 6, 7 e 8. O 3 é sub-workflow e não se ativa.
+- Pronto quando: GET de cada workflow devolve active=true (menos o 3) e todo nó HTTP tem credencial.
 
 FASE 6. Ligar as pontas (siga a seção 2 do clientes/valeambientes/n8n/rastreio/LEIA-ME.md)
-- Ativar os workflows 1, 2, 4 e 8 pela API do n8n (skill n8n-pela-api). O 3 é sub-workflow e não se ativa.
-- Só DEPOIS de ativar o 2: cadastrar no Kommo o webhook add_message para a URL do [2] (skill kommo-pela-api).
-- R ligar-meta valeambientes  e depois  --aplicar: pendura o [3] no gatilho do WhatsApp que já existe. Feche a aba
-  desse workflow no editor antes. Nunca crie um segundo gatilho do WhatsApp.
-- Etiqueta no site: me entregue a linha <script> pronta (está no LEIA-ME dos workflows) para eu colar no <head>.
+- Kommo (skill kommo-pela-api), só DEPOIS de ativar o workflow de destino: webhook add_message para a URL do [2]
+  e webhook status_lead para a URL do [5].
+- Meta: R ligar-meta valeambientes  e depois  --aplicar: pendura o [3] no gatilho do WhatsApp que já existe. Feche a
+  aba desse workflow no editor antes. Nunca crie um segundo gatilho do WhatsApp.
+- Google: me entregue a linha <script> da etiqueta pronta (está no LEIA-ME dos workflows) para colar no <head>
+  do site. É ela que carrega o clique do Google até o WhatsApp.
 
-FASE 7. Provar o módulo 1, nos dois sentidos, com um lead [QA]
-- Crie (ou me peça) um lead de teste com [QA] no nome, no funil do config.
+FASE 7. Provar a origem no Kommo, nos dois sentidos, com um lead [QA]
+- Crie um lead de teste com [QA] no nome, no funil do config.
 - R testar valeambientes sessao --enviar                              -> anote o código devolvido
 - R testar valeambientes mensagem --codigo <código> --lead <id> --enviar
 - Espere o [4] rodar (5 minutos) e confira: o lead ganhou GCLID, UTMs e "Origem comprovada = Google Ads".
 - Sentido contrário, os dois têm de NÃO gravar nada:
   R testar valeambientes mensagem --lead <id> --sem-codigo --enviar
   R testar valeambientes mensagem --codigo <código> --lead <id> --conta 1 --enviar
-- Cada comando imprime a consulta SQL da prova. Rode a consulta e me mostre o resultado.
-- No fim, tire o lead [QA] do funil.
+- Cada comando imprime a consulta SQL da prova. Rode a consulta e guarde o resultado.
 
-FASE 8. Módulo 2 (só se as chaves do Google e da Meta estiverem no rastreio.env)
-- R plugar valeambientes --aplicar   -> "módulo 2 (volta da venda): credenciais prontas"
-- R montar valeambientes  e  R banco valeambientes --aplicar   (o 002 leva conta, dataset e mapa de etapas)
-- R criar valeambientes --aplicar    -> cria 5, 6 e 7 desligados
-- Ativar 5, 6 e 7; cadastrar no Kommo o webhook status_lead para a URL do [5].
+FASE 8. Provar a conversão em ensaio no Google Ads e na Meta Ads
 - R testar valeambientes etapa --lead <id [QA]> --etapa 0 --enviar
-- Pronto quando: linhas em rastreio_eventos com estado ensaio_ok nas duas plataformas, e o evento aparece na
-  aba Testar eventos da Meta. NÃO arme nada: armar (update rastreio_config set google_armado = true / meta_armado
-  = true) é decisão do dono do projeto, depois de olhar o ensaio.
+- Pronto quando: há linhas em rastreio_eventos com estado ensaio_ok para o Google e para a Meta, e o evento
+  aparece na aba Testar eventos do conjunto de dados da Meta.
+- Tire o lead [QA] do funil.
+- Me devolva o resumo final (abaixo) e pergunte: "ensaio ok nas duas, posso armar?".
 
-O que você me devolve no fim de cada fase: Resultado, Prova (saída do comando ou da consulta), Não feito ou
-risco, Próximo passo. E atualize o clientes/valeambientes/historico.md com uma linha por fase fechada.
+FASE 9. Armar (só com o meu "pode armar")
+- Armar faz a etapa de lead de verdade virar conversão real nas contas de anúncio. No SQL Editor do Supabase:
+  update public.rastreio_config set google_armado = true, meta_armado = true where id = 1;
+- Prova: select public.rastreio_saude(); e, na próxima mudança de etapa de um lead real com origem, uma linha em
+  rastreio_eventos com estado enviado e a conversão aparecendo no Google Ads e no Gerenciador de Eventos.
+
+Não faça, mesmo com tudo verde:
+- não grave no campo de origem antigo do Kommo: o rastreio escreve só em "Origem comprovada";
+- não altere nem desligue workflow, webhook ou automação que já existia;
+- não cole chave no chat, em workflow nem em arquivo versionado, e não faça commit.
+
+Resumo final, um só, depois da FASE 8: por fase, Resultado, Prova (saída do comando ou da consulta) e Não feito
+ou risco. Depois a lista dos 8 workflows com id e se está ativo, as credenciais criadas no n8n, os webhooks
+cadastrados no Kommo e a linha <script> do site. Atualize o clientes/valeambientes/historico.md com uma linha por fase
+fechada.
 
 Observações deste cliente:
-- O Kommo já tem um webhook de terceiro (id 46291588, OneClickAds) recebendo status_lead da conta de anúncios act_10150261043852081. É provável que ele já mande conversão para a Meta: decidir um só remetente ANTES de armar o [RASTREIO 7].
 - O workflow do gatilho do WhatsApp (6EqMv8QUuOmcKlAl) tem mais de um gatilho. O ligar-meta escolhe o da credencial vale-ambientes. O resto desse workflow não é deste projeto: não alterar.
 - Esse mesmo workflow já grava utm_source=meta e utm_medium=cpc no lead, por cima do que houver. O [RASTREIO 3] roda em paralelo a ele; desligar a gravação antiga é decisão posterior, depois de 7 dias comparando os dois.
 - A origem que existe hoje no campo 'Origem do Lead' (962553) é gravada por uma regra do Kommo na criação do lead, lendo a frase da primeira mensagem, sem prova (em 30 dias: 211 leads 'Google Ads' e nenhum com GCLID). Por isso o rastreio grava no campo novo 'Origem comprovada' e nunca no 962553.

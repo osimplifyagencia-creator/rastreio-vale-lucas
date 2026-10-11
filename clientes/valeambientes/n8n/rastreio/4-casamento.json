@@ -2,7 +2,7 @@
   "name": "[RASTREIO 4] Casamento com o lead | valeambientes",
   "nodes": [
     {
-      "id": "ea3a9201-7701-4dc2-afc7-e94c8079afd2",
+      "id": "ff21e342-32aa-4ee1-9169-c4417f92ce17",
       "name": "gatilho",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -22,7 +22,7 @@
       }
     },
     {
-      "id": "5dd0cbdd-e85b-4191-92e9-b9b672b6e5fa",
+      "id": "aaa102a6-894b-4343-b83c-141235ea20c3",
       "name": "configuracoes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -35,7 +35,7 @@
       }
     },
     {
-      "id": "cc55f00a-fc3e-4538-9b01-8bffa4d14a11",
+      "id": "d4f4c59c-8225-4e31-bd93-fcbf24df9cb1",
       "name": "a casar",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -64,7 +64,7 @@
       "waitBetweenTries": 2000
     },
     {
-      "id": "4104f99a-3357-4f10-9f8c-ade6ad6ceb06",
+      "id": "4d91006b-4bed-4d34-8371-e8fbb81b490a",
       "name": "explode",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -77,7 +77,7 @@
       }
     },
     {
-      "id": "28d57c8f-7add-47f0-af83-abf30d5d0b29",
+      "id": "86d162d9-7fd2-4e3b-aa5c-5046ad80fd11",
       "name": "busca",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -118,7 +118,7 @@
       }
     },
     {
-      "id": "d2c3000f-6fb3-430d-97c9-7d40014ee1f2",
+      "id": "aa7e5d69-9c93-4f47-81c9-87e24c0ce654",
       "name": "resolve",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -131,7 +131,7 @@
       }
     },
     {
-      "id": "73e791a0-e604-426b-920f-c5d3fcc494e6",
+      "id": "2b266a74-d296-4a31-90bd-d88430e6f3b3",
       "name": "achou lead?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -149,7 +149,7 @@
           },
           "conditions": [
             {
-              "id": "1c7d673e-17ed-421d-a30a-b15cef627727",
+              "id": "4eeb1772-bfa7-4bf0-9f2b-48ba470e09c1",
               "leftValue": "={{ $json.lead_id }}",
               "rightValue": "",
               "operator": {
@@ -166,7 +166,7 @@
       }
     },
     {
-      "id": "268d042f-17af-4234-813a-78475ee55071",
+      "id": "c5f62849-72e4-4b4b-aa5e-5cbd584e1e20",
       "name": "le lead",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -207,7 +207,7 @@
       }
     },
     {
-      "id": "4b68231e-ca32-433d-b14e-a0818aafdd98",
+      "id": "d1ab2b05-f002-455c-9430-f0a5ac5d4fef",
       "name": "decide",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -220,7 +220,7 @@
       }
     },
     {
-      "id": "ceabd272-278a-44dd-92fd-85051771267a",
+      "id": "125d103f-4fb2-4ae3-acd0-2d8658bb1db7",
       "name": "tem patch?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -238,7 +238,7 @@
           },
           "conditions": [
             {
-              "id": "d9c1590f-d525-43e9-a074-946b6dbd3f96",
+              "id": "68434ccb-d4ac-47da-be60-52c2a3bc9113",
               "leftValue": "={{ $json.tem_patch }}",
               "rightValue": "",
               "operator": {
@@ -255,7 +255,7 @@
       }
     },
     {
-      "id": "95f43901-ee10-4a05-8007-d41ec7a307bd",
+      "id": "8a741ae0-b552-42cf-867e-8f78f1c17f59",
       "name": "grava no lead",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -299,7 +299,7 @@
       }
     },
     {
-      "id": "49c8ebbd-20c7-434c-99ba-999ab4fa2cb9",
+      "id": "c88e9005-6ba5-4349-b9ae-d031773255de",
       "name": "confere patch",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -312,7 +312,7 @@
       }
     },
     {
-      "id": "7331423c-7931-4243-b912-dcfc2d785aa0",
+      "id": "02b01fac-b530-4533-80d4-779272fc04b6",
       "name": "marca casado",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -341,7 +341,7 @@
       "waitBetweenTries": 2000
     },
     {
-      "id": "335c775e-fee6-440c-ace4-7347cdd57909",
+      "id": "9a927918-6313-4d36-87af-e99bcb49740d",
       "name": "marca sem patch",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -370,7 +370,7 @@
       "waitBetweenTries": 2000
     },
     {
-      "id": "16930a37-48ae-4a0a-afeb-d1571a10ea88",
+      "id": "bc489430-3f2e-4505-89d2-716cb5d438c7",
       "name": "marca sem lead",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,

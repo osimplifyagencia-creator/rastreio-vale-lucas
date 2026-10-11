@@ -2,7 +2,7 @@
   "name": "[RASTREIO 3] Meta referral (sub) | valeambientes",
   "nodes": [
     {
-      "id": "8a94268d-13d0-4182-bef1-af7c7654254f",
+      "id": "ff8187aa-e268-4c12-a068-aee0ad3d9668",
       "name": "gatilho",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
@@ -15,7 +15,7 @@
       }
     },
     {
-      "id": "53c1755d-6e01-4230-83f7-9c92f702b35f",
+      "id": "9fa966b0-e34b-4819-95a4-64d7382b7b52",
       "name": "extrai",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -28,7 +28,7 @@
       }
     },
     {
-      "id": "593f4f92-216b-4bde-8dc8-b2809b3a3731",
+      "id": "605868be-c180-43a9-ba47-017c1a228776",
       "name": "grava evidencia",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,

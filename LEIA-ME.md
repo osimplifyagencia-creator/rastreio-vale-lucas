@@ -1,6 +1,6 @@
 # Pacote do rastreio: valeambientes
 
-Gerado em 10/10/2026. Esta pasta é um projeto pronto para abrir no Claude Code (ou em outra IA que leia arquivos e
+Gerado em 11/10/2026. Esta pasta é um projeto pronto para abrir no Claude Code (ou em outra IA que leia arquivos e
 rode comandos). Dentro dela está tudo para ligar o rastreio de origem do cliente: os 8 workflows do n8n, o banco,
 os scripts, as skills e o roteiro.
 

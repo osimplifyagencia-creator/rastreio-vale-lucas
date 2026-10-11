@@ -90,7 +90,6 @@
     },
     "workflows": {},
     "notas_operacao": [
-      "O Kommo já tem um webhook de terceiro (id 46291588, OneClickAds) recebendo status_lead da conta de anúncios act_10150261043852081. É provável que ele já mande conversão para a Meta: decidir um só remetente ANTES de armar o [RASTREIO 7].",
       "O workflow do gatilho do WhatsApp (6EqMv8QUuOmcKlAl) tem mais de um gatilho. O ligar-meta escolhe o da credencial vale-ambientes. O resto desse workflow não é deste projeto: não alterar.",
       "Esse mesmo workflow já grava utm_source=meta e utm_medium=cpc no lead, por cima do que houver. O [RASTREIO 3] roda em paralelo a ele; desligar a gravação antiga é decisão posterior, depois de 7 dias comparando os dois.",
       "A origem que existe hoje no campo 'Origem do Lead' (962553) é gravada por uma regra do Kommo na criação do lead, lendo a frase da primeira mensagem, sem prova (em 30 dias: 211 leads 'Google Ads' e nenhum com GCLID). Por isso o rastreio grava no campo novo 'Origem comprovada' e nunca no 962553.",
@@ -99,11 +98,6 @@
       "Site valeambientes.com.br na Loja Integrada: falta confirmar se aceita script no <head> e como é o link do botão do WhatsApp.",
       "Google Cloud: projeto 'osimplify' (conta osimplify.agencia@gmail.com), Data Manager API ATIVADA em 10/10/2026, tela de consentimento em produção. Cliente OAuth 'Rastreio Vale Ambientes (n8n)' já criado, com o redirecionamento https://n8n.valeambientes.cloud/rest/oauth2-credential/callback: o ID e a chave secreta vêm por fora, para criar a credencial OAuth2 no editor do n8n. Conta de administrador do Google Ads vista: 654-432-3282 (MCC - Osimplify); falta confirmar se a conta da Vale está debaixo dela."
     ],
-    "perguntas_operacao": [
-      [
-        "A OneClickAds já manda conversão do Kommo para a Meta?",
-        "O Kommo tem um webhook dela em mudança de etapa. Dois remetentes contam a venda em dobro: escolher um só"
-      ]
-    ]
+    "perguntas_operacao": []
   }
 }

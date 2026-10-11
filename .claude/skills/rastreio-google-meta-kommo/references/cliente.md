@@ -1,6 +1,6 @@
 # Cliente: valeambientes
 
-Gerado em 10/10/2026 a partir do `clientes/valeambientes/config.json`, que é a fonte da verdade.
+Gerado em 11/10/2026 a partir do `clientes/valeambientes/config.json`, que é a fonte da verdade.
 
 | O quê | Valor |
 |---|---|
@@ -24,7 +24,6 @@ Gerado em 10/10/2026 a partir do `clientes/valeambientes/config.json`, que é a 
 
 ## Observações medidas
 
-- O Kommo já tem um webhook de terceiro (id 46291588, OneClickAds) recebendo status_lead da conta de anúncios act_10150261043852081. É provável que ele já mande conversão para a Meta: decidir um só remetente ANTES de armar o [RASTREIO 7].
 - O workflow do gatilho do WhatsApp (6EqMv8QUuOmcKlAl) tem mais de um gatilho. O ligar-meta escolhe o da credencial vale-ambientes. O resto desse workflow não é deste projeto: não alterar.
 - Esse mesmo workflow já grava utm_source=meta e utm_medium=cpc no lead, por cima do que houver. O [RASTREIO 3] roda em paralelo a ele; desligar a gravação antiga é decisão posterior, depois de 7 dias comparando os dois.
 - A origem que existe hoje no campo 'Origem do Lead' (962553) é gravada por uma regra do Kommo na criação do lead, lendo a frase da primeira mensagem, sem prova (em 30 dias: 211 leads 'Google Ads' e nenhum com GCLID). Por isso o rastreio grava no campo novo 'Origem comprovada' e nunca no 962553.
