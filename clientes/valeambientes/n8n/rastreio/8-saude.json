@@ -2,7 +2,7 @@
   "name": "[RASTREIO 8] Saúde diária | valeambientes",
   "nodes": [
     {
-      "id": "151e31f7-aa67-48d6-bc9e-9329cec2a60e",
+      "id": "cd0ff0ed-138a-48c9-921e-2fd4540b7369",
       "name": "gatilho",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -23,7 +23,7 @@
       }
     },
     {
-      "id": "51d8d646-3479-4772-8508-99b906ca4e45",
+      "id": "42edd704-80af-4892-b805-2986cc7620f1",
       "name": "configuracoes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -32,11 +32,11 @@
         0
       ],
       "parameters": {
-        "jsCode": "// [RASTREIO] Configuração do cliente valeambientes. GERADO por rastreio.py montar a partir do config.json:\n// mudou algo? edite o config.json e monte de novo, não edite aqui.\nreturn [{ json: {\n  \"cliente\": \"valeambientes\",\n  \"kommo_api\": \"https://reginaldovaleambientescombr.kommo.com/api/v4\",\n  \"kommo_conta\": 32040023,\n  \"pipelines\": [\n    12405720\n  ],\n  \"campos_tracking\": {\n    \"UTM_CONTENT\": 330516,\n    \"UTM_MEDIUM\": 330518,\n    \"UTM_CAMPAIGN\": 330520,\n    \"UTM_SOURCE\": 330522,\n    \"UTM_TERM\": 330524,\n    \"UTM_REFERRER\": 330526,\n    \"REFERRER\": 330528,\n    \"GCLIENTID\": 330530,\n    \"GCLID\": 330532,\n    \"FBCLID\": 330534\n  },\n  \"campo_origem_id\": null,\n  \"origem_enums\": {},\n  \"etapas_mapeadas\": [\n    \"12405720:95858036\",\n    \"12405720:95858040\",\n    \"12405720:142\"\n  ],\n  \"espera_sessoes\": true,\n  \"lead_max_horas_antes\": 48,\n  \"teto_sem_lead\": 10\n} }];\n"
+        "jsCode": "// [RASTREIO] Configuração do cliente valeambientes. GERADO por rastreio.py montar a partir do config.json:\n// mudou algo? edite o config.json e monte de novo, não edite aqui.\nreturn [{ json: {\n  \"cliente\": \"valeambientes\",\n  \"kommo_api\": \"https://reginaldovaleambientescombr.kommo.com/api/v4\",\n  \"kommo_conta\": 32040023,\n  \"pipelines\": [\n    12405720\n  ],\n  \"campos_tracking\": {\n    \"UTM_CONTENT\": 330516,\n    \"UTM_MEDIUM\": 330518,\n    \"UTM_CAMPAIGN\": 330520,\n    \"UTM_SOURCE\": 330522,\n    \"UTM_TERM\": 330524,\n    \"UTM_REFERRER\": 330526,\n    \"REFERRER\": 330528,\n    \"GCLIENTID\": 330530,\n    \"GCLID\": 330532,\n    \"FBCLID\": 330534\n  },\n  \"campo_origem_id\": null,\n  \"origem_enums\": {},\n  \"campos_extra\": {},\n  \"etapas_mapeadas\": [\n    \"12405720:95858036\",\n    \"12405720:95858040\",\n    \"12405720:142\"\n  ],\n  \"espera_sessoes\": true,\n  \"lead_max_horas_antes\": 48,\n  \"teto_sem_lead\": 10\n} }];\n"
       }
     },
     {
-      "id": "973ebf27-df81-4a7f-bdf4-33a138a69507",
+      "id": "a3218e9e-8a2f-43db-b4f8-7f1d9a928986",
       "name": "saude",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -65,7 +65,7 @@
       "waitBetweenTries": 2000
     },
     {
-      "id": "125b5435-e58a-4603-a01f-06f6c2cefd57",
+      "id": "b66b27f3-7851-43e3-9654-baa84526b584",
       "name": "avalia",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -78,7 +78,7 @@
       }
     },
     {
-      "id": "4ee6d22b-9146-40ba-b7fc-1e75a1bd21f5",
+      "id": "0d2911e5-f7c4-43a5-96c8-87a3e00cd70c",
       "name": "tem alerta?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -96,7 +96,7 @@
           },
           "conditions": [
             {
-              "id": "9fc9018d-6115-4fce-a2f8-a3ffc0149330",
+              "id": "880f2184-062a-4e8d-a84e-afb25a1b4144",
               "leftValue": "={{ $json.tem_alerta }}",
               "rightValue": "",
               "operator": {
@@ -113,7 +113,7 @@
       }
     },
     {
-      "id": "e929c923-c339-4669-9ca5-6829179c6f3d",
+      "id": "6812a40d-19dc-4ecf-a32e-39d2f4856a6b",
       "name": "avisa",
       "type": "n8n-nodes-base.stopAndError",
       "typeVersion": 1,

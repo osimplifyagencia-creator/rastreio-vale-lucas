@@ -134,7 +134,7 @@ FASE 4. Montar os workflows e aplicar o banco no Supabase
 
 FASE 5. n8n: criar e ativar os 8 workflows
 - R criar valeambientes  e depois  --aplicar    -> cria os 8 desligados; ids em rastreio.workflows
-- Ative pela API do n8n (skill n8n-pela-api): 1, 2, 4, 5, 6, 7 e 8. O 3 é sub-workflow e não se ativa.
+- Ative pela API do n8n (skill n8n-pela-api): 1, 2, 4, 5, 6, 7 e 8. O 3 é sub-workflow: quem publica ele é o `ligar-meta`, antes de pendurar (n8n novo recusa chamar sub-workflow não publicado).
 - Pronto quando: GET de cada workflow devolve active=true (menos o 3) e todo nó HTTP tem credencial.
 
 FASE 6. Ligar as pontas (siga a seção 2 do clientes/valeambientes/n8n/rastreio/LEIA-ME.md)

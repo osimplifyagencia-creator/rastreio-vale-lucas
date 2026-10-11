@@ -2,7 +2,7 @@
   "name": "[RASTREIO 1] Sessão do site | valeambientes",
   "nodes": [
     {
-      "id": "05819d7a-c957-41ea-85f0-25f712dd4342",
+      "id": "278104a2-8ecc-41c4-a4fb-a1203b3e48fd",
       "name": "gatilho",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -16,10 +16,10 @@
         "responseMode": "onReceived",
         "options": {}
       },
-      "webhookId": "8447ea15-d1c9-4e93-978f-d8c91aa8aeba"
+      "webhookId": "aec1a58d-c1d9-4e67-bc6b-f7d7678ddcaa"
     },
     {
-      "id": "f63a1d83-3b41-45cc-a1e4-1baa3f4a5c89",
+      "id": "093917f5-8dd8-4262-8cbb-4eff5c37f9e3",
       "name": "valida",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -32,7 +32,7 @@
       }
     },
     {
-      "id": "2cc4d903-59ac-42d6-bf2b-7a21d127a362",
+      "id": "496eda32-1ced-40c3-a12d-57dd8259e90c",
       "name": "grava sessao",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,

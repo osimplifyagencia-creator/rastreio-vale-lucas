@@ -2,7 +2,7 @@
   "name": "[RASTREIO 2] Entrada Kommo (código) | valeambientes",
   "nodes": [
     {
-      "id": "7d74b06a-47f9-40fa-bc95-ffc8e9c13e05",
+      "id": "3a133ae5-7634-42ca-9e85-d7757d93203f",
       "name": "gatilho",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -16,10 +16,10 @@
         "responseMode": "onReceived",
         "options": {}
       },
-      "webhookId": "100e0821-999a-471a-bc00-f11804aec8d9"
+      "webhookId": "1000fdd0-1326-4594-9ed3-31be101e2ee1"
     },
     {
-      "id": "d7d974c4-525b-4c31-b927-9391f37b5702",
+      "id": "f4797699-4a5b-484e-81e1-6b7e59dd3720",
       "name": "configuracoes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -28,11 +28,11 @@
         0
       ],
       "parameters": {
-        "jsCode": "// [RASTREIO] Configuração do cliente valeambientes. GERADO por rastreio.py montar a partir do config.json:\n// mudou algo? edite o config.json e monte de novo, não edite aqui.\nreturn [{ json: {\n  \"cliente\": \"valeambientes\",\n  \"kommo_api\": \"https://reginaldovaleambientescombr.kommo.com/api/v4\",\n  \"kommo_conta\": 32040023,\n  \"pipelines\": [\n    12405720\n  ],\n  \"campos_tracking\": {\n    \"UTM_CONTENT\": 330516,\n    \"UTM_MEDIUM\": 330518,\n    \"UTM_CAMPAIGN\": 330520,\n    \"UTM_SOURCE\": 330522,\n    \"UTM_TERM\": 330524,\n    \"UTM_REFERRER\": 330526,\n    \"REFERRER\": 330528,\n    \"GCLIENTID\": 330530,\n    \"GCLID\": 330532,\n    \"FBCLID\": 330534\n  },\n  \"campo_origem_id\": null,\n  \"origem_enums\": {},\n  \"etapas_mapeadas\": [\n    \"12405720:95858036\",\n    \"12405720:95858040\",\n    \"12405720:142\"\n  ],\n  \"espera_sessoes\": true,\n  \"lead_max_horas_antes\": 48,\n  \"teto_sem_lead\": 10\n} }];\n"
+        "jsCode": "// [RASTREIO] Configuração do cliente valeambientes. GERADO por rastreio.py montar a partir do config.json:\n// mudou algo? edite o config.json e monte de novo, não edite aqui.\nreturn [{ json: {\n  \"cliente\": \"valeambientes\",\n  \"kommo_api\": \"https://reginaldovaleambientescombr.kommo.com/api/v4\",\n  \"kommo_conta\": 32040023,\n  \"pipelines\": [\n    12405720\n  ],\n  \"campos_tracking\": {\n    \"UTM_CONTENT\": 330516,\n    \"UTM_MEDIUM\": 330518,\n    \"UTM_CAMPAIGN\": 330520,\n    \"UTM_SOURCE\": 330522,\n    \"UTM_TERM\": 330524,\n    \"UTM_REFERRER\": 330526,\n    \"REFERRER\": 330528,\n    \"GCLIENTID\": 330530,\n    \"GCLID\": 330532,\n    \"FBCLID\": 330534\n  },\n  \"campo_origem_id\": null,\n  \"origem_enums\": {},\n  \"campos_extra\": {},\n  \"etapas_mapeadas\": [\n    \"12405720:95858036\",\n    \"12405720:95858040\",\n    \"12405720:142\"\n  ],\n  \"espera_sessoes\": true,\n  \"lead_max_horas_antes\": 48,\n  \"teto_sem_lead\": 10\n} }];\n"
       }
     },
     {
-      "id": "4fc65c14-838f-4513-824c-c8b9e137d89a",
+      "id": "a9dd2117-9829-408a-b09f-8ba750b9d1d1",
       "name": "extrai",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -45,7 +45,7 @@
       }
     },
     {
-      "id": "3d4de914-813d-4978-95d7-88c63281b38f",
+      "id": "be5ed713-372b-4a57-8321-7376bd09e6c2",
       "name": "grava evidencia",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,

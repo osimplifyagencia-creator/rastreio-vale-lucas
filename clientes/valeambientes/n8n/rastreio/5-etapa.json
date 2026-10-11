@@ -2,7 +2,7 @@
   "name": "[RASTREIO 5] Etapa do Kommo vira conversão | valeambientes",
   "nodes": [
     {
-      "id": "8dea65fd-6f0d-462e-bc43-8403c1265380",
+      "id": "b3bc30b2-7329-461c-ae0d-8417961dc5fd",
       "name": "gatilho",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -16,10 +16,10 @@
         "responseMode": "onReceived",
         "options": {}
       },
-      "webhookId": "2cbdd70f-65db-42a7-84b0-6dee152e63e0"
+      "webhookId": "5bcabca2-731c-4c2a-99b6-fa46bc753c6e"
     },
     {
-      "id": "e22d78ac-7c4d-4788-a129-d985d4f04615",
+      "id": "64669387-8b83-48a7-b352-0e7586f5eed7",
       "name": "configuracoes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -28,11 +28,11 @@
         0
       ],
       "parameters": {
-        "jsCode": "// [RASTREIO] Configuração do cliente valeambientes. GERADO por rastreio.py montar a partir do config.json:\n// mudou algo? edite o config.json e monte de novo, não edite aqui.\nreturn [{ json: {\n  \"cliente\": \"valeambientes\",\n  \"kommo_api\": \"https://reginaldovaleambientescombr.kommo.com/api/v4\",\n  \"kommo_conta\": 32040023,\n  \"pipelines\": [\n    12405720\n  ],\n  \"campos_tracking\": {\n    \"UTM_CONTENT\": 330516,\n    \"UTM_MEDIUM\": 330518,\n    \"UTM_CAMPAIGN\": 330520,\n    \"UTM_SOURCE\": 330522,\n    \"UTM_TERM\": 330524,\n    \"UTM_REFERRER\": 330526,\n    \"REFERRER\": 330528,\n    \"GCLIENTID\": 330530,\n    \"GCLID\": 330532,\n    \"FBCLID\": 330534\n  },\n  \"campo_origem_id\": null,\n  \"origem_enums\": {},\n  \"etapas_mapeadas\": [\n    \"12405720:95858036\",\n    \"12405720:95858040\",\n    \"12405720:142\"\n  ],\n  \"espera_sessoes\": true,\n  \"lead_max_horas_antes\": 48,\n  \"teto_sem_lead\": 10\n} }];\n"
+        "jsCode": "// [RASTREIO] Configuração do cliente valeambientes. GERADO por rastreio.py montar a partir do config.json:\n// mudou algo? edite o config.json e monte de novo, não edite aqui.\nreturn [{ json: {\n  \"cliente\": \"valeambientes\",\n  \"kommo_api\": \"https://reginaldovaleambientescombr.kommo.com/api/v4\",\n  \"kommo_conta\": 32040023,\n  \"pipelines\": [\n    12405720\n  ],\n  \"campos_tracking\": {\n    \"UTM_CONTENT\": 330516,\n    \"UTM_MEDIUM\": 330518,\n    \"UTM_CAMPAIGN\": 330520,\n    \"UTM_SOURCE\": 330522,\n    \"UTM_TERM\": 330524,\n    \"UTM_REFERRER\": 330526,\n    \"REFERRER\": 330528,\n    \"GCLIENTID\": 330530,\n    \"GCLID\": 330532,\n    \"FBCLID\": 330534\n  },\n  \"campo_origem_id\": null,\n  \"origem_enums\": {},\n  \"campos_extra\": {},\n  \"etapas_mapeadas\": [\n    \"12405720:95858036\",\n    \"12405720:95858040\",\n    \"12405720:142\"\n  ],\n  \"espera_sessoes\": true,\n  \"lead_max_horas_antes\": 48,\n  \"teto_sem_lead\": 10\n} }];\n"
       }
     },
     {
-      "id": "74e0cfb0-d7f0-4603-b74e-7cd7a8afed95",
+      "id": "eeaf6ed0-2741-44e8-86a7-5fdb6cef1f43",
       "name": "extrai",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -45,7 +45,7 @@
       }
     },
     {
-      "id": "b383bad2-07f6-4a8e-ae1b-9e3be6a6ae59",
+      "id": "95122b77-2738-4663-b0a6-da8342c390f3",
       "name": "le lead",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -86,7 +86,7 @@
       }
     },
     {
-      "id": "0812a339-dbee-4520-8f63-982444bdbe48",
+      "id": "a8bc6993-c87f-4a89-b2ac-db53acf098b0",
       "name": "contato",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -99,7 +99,7 @@
       }
     },
     {
-      "id": "5322a89b-4106-456d-88a9-dfda40f109aa",
+      "id": "4d793004-6cea-4371-8e63-15a190f8c0e5",
       "name": "le contato",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -140,7 +140,7 @@
       }
     },
     {
-      "id": "ef1c0a0a-2c57-43de-9401-0d36b2347e7d",
+      "id": "30304f30-87f8-4604-91c1-5c7330ff35f0",
       "name": "monta",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -153,7 +153,7 @@
       }
     },
     {
-      "id": "4ea91686-0ae8-4d04-8999-e2bdcaac0e5b",
+      "id": "65130293-4b22-441d-8998-e39324bcce6c",
       "name": "enfileira",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,

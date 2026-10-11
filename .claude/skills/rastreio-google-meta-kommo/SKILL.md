@@ -39,10 +39,10 @@ Todos os que escrevem em produção são secos por padrão: sem `--aplicar` (ou 
 | `R levantar <slug> [--gravar]` | só leitura: campos, funis e webhooks do Kommo; workflows e credenciais do n8n. Com `--gravar`, preenche no config o que estava vazio (conta, campos, funil, proposta de etapas, gatilho do WhatsApp) | `config.rastreio: completo para montar` |
 | `R plugar <slug> [--aplicar] [--so kommo,supabase,google,meta]` | lê `clientes/<slug>/rastreio.env`, prova cada chave numa chamada real, cria a credencial no n8n, grava ids no config | `módulo 1: credenciais prontas` |
 | `R banco <slug> [--aplicar]` | passa o SQL num Postgres descartável e aplica o 001 e o 002 pela API de gestão do Supabase | saúde responde, `armado: False` |
-| `R campo-origem <slug> [--aplicar]` | cria no Kommo o campo de lista "Origem comprovada" (Google Ads, Meta Ads, Site) | ids no config |
+| `R campo-origem <slug> [--aplicar]` | cria no Kommo o campo de lista "Origem comprovada" (Google Ads, Meta Ads, Site) e os de texto "Anúncio de origem (id)" e "Clique do WhatsApp (ctwa_clid)" | ids no config (`campo_origem_id`, `campos_extra`) |
 | `R montar <slug>` | local: gera `1-sessao.json` a `8-saude.json`, o `LEIA-ME.md` e o `rastreio_002_config.sql` | `MONTAGEM workflows=8 erros=0` |
 | `R criar <slug> [--aplicar] [--modulo 1] [--sem-credencial]` | cria os workflows DESLIGADOS no n8n | ids em `rastreio.workflows`, releitura bate |
-| `R ligar-meta <slug> [--aplicar]` | pendura o [3] no gatilho do WhatsApp que já existe (faz backup antes) | nó `rastreio (sub)` lido de volta |
+| `R ligar-meta <slug> [--aplicar]` | publica o [3] e pendura no gatilho do WhatsApp que já existe (faz backup antes) | nó `rastreio (sub)` lido de volta |
 | `R testar <slug> sessao\|mensagem\|etapa [--codigo X] [--lead N] [--etapa i] [--sem-codigo] [--conta N] [--url-teste] [--enviar]` | manda o mesmo corpo que a página e o Kommo mandam; imprime a consulta SQL da prova | a consulta mostra a linha (ou vazio, no sentido contrário) |
 
 Mudou qualquer coisa no `config.json`? Rode `montar` de novo: os JSON são gerados, não se editam à mão.

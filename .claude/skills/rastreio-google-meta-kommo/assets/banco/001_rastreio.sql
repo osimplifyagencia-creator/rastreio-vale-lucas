@@ -416,10 +416,16 @@ begin
       motivo_m := 'origem_nao_e_meta';
     elsif ctwa is null and fbc is null and fbp is null and cardinality(ph_m) = 0 and cardinality(em) = 0 then
       motivo_m := 'sem_identificador';
+    elsif ctwa is not null and c.meta_waba_id is null and fbc is null and fbp is null and cardinality(ph_m) = 0 and cardinality(em) = 0 then
+      motivo_m := 'sem_waba_da_meta';
     else
-      asrc := case when ctwa is not null then 'business_messaging' else 'system_generated' end;
+      -- evento de mensagem (business_messaging) só com a conta do WhatsApp no config: sem ela a Meta recusa
+      -- (subcode 2804116, medido em 11/10/2026) e a recusa de um evento derruba o lote inteiro. Sem a conta o
+      -- evento sai como system_generated, casado pelo telefone ou e-mail, e o ctwa_clid não vai.
+      asrc := case when ctwa is not null and c.meta_waba_id is not null then 'business_messaging' else 'system_generated' end;
       ids := jsonb_strip_nulls(jsonb_build_object(
-        'ctwa_clid', ctwa, 'fbc', fbc, 'fbp', fbp, 'telefones', to_jsonb(ph_m), 'emails', to_jsonb(em)));
+        'ctwa_clid', case when asrc = 'business_messaging' then ctwa end,
+        'fbc', fbc, 'fbp', fbp, 'telefones', to_jsonb(ph_m), 'emails', to_jsonb(em)));
       insert into public.rastreio_eventos (event_id, plataforma, lead_id, evento, destino, ocorrido_em, valor, moeda,
                                            action_source, identificadores, estado, motivo)
       values (ev, 'meta', lead, m.evento, m.meta_evento, quando, case when suspeito then null else v end, c.moeda,

@@ -66,7 +66,19 @@ contra a API real. O ensaio (`validateOnly` / `test_event_code`) é onde se conf
 }
 ```
 
-- `business_messaging` só quando o lead veio de clique para WhatsApp (tem `ctwa_clid`). O resto vai `system_generated` com telefone em hash e `fbc`/`fbp` se houver.
+- `business_messaging` só quando o lead veio de clique para WhatsApp (tem `ctwa_clid`) **e a conta do WhatsApp
+  (WABA) está no config**. O resto vai `system_generated` com telefone em hash e `fbc`/`fbp` se houver.
+- **Medido em 11/10/2026 contra a API real, com `test_event_code`:**
+  - `system_generated` com `fbc` e `fbp`, ou só com telefone em hash, é aceito: HTTP 200 `events_received`.
+    `Purchase` com `custom_data.value` também.
+  - `business_messaging` sem `whatsapp_business_account_id` nem `page_id` é recusado: HTTP 400, código 100,
+    subcode 2804116. Por isso o banco só monta evento de mensagem com a WABA no config; sem ela o lead de
+    anúncio de WhatsApp sai como `system_generated` pelo telefone, e sem telefone não sai (`sem_waba_da_meta`).
+  - O token gerado no Gerenciador de Eventos ("Gerar token de acesso") ENVIA evento e não LÊ o dataset:
+    `GET /<dataset>` devolve `(#100) Missing Permission`. A prova do token é um envio com `data: []`: a resposta
+    `param data must be non-empty` quer dizer token e dataset aceitos; subcode 33 quer dizer sem acesso ao dataset.
+  - O código de teste fica em Gerenciador de Eventos, o dataset, Eventos de teste, canal Site, "eventos do seu
+    servidor". A aba só mostra o que chega enquanto está aberta.
 - `test_event_code` só com a Meta desarmada. Desarmada e sem código: o banco nem entrega lote.
 - `event_id` igual ao do pixel, se o site também mandar o evento: a Meta deduplica.
 - Nomes aceitos para business messaging (doc da Meta, conferida em 10/10/2026): Purchase, LeadSubmitted,
@@ -78,7 +90,8 @@ contra a API real. O ensaio (`validateOnly` / `test_event_code`) é onde se conf
   ou lido em `/{WABA_ID}/dataset`; token de usuário do sistema do MESMO Business Manager do dataset (token de
   outro BM volta erro 100). App, WABA e dataset no mesmo BM dispensam acesso avançado (desenvolvedor direto).
 - `ctwa_clid` some em anúncio de Status do WhatsApp: sem ele, o evento vai `system_generated`.
-- **Conferir na doc:** se o dataset precisa estar ligado à WABA para aceitar `business_messaging`, a versão da Graph em uso (`meta_versao`, padrão `v21.0`), e se `whatsapp_business_account_id` vai em `user_data` ou no nível do evento.
+- **Ainda não medido:** `business_messaging` COM a WABA (a bancada não tem WhatsApp ligado a dataset). Conferir na
+  doc se o dataset precisa estar ligado à WABA, a versão da Graph em uso (`meta_versao`, padrão `v21.0`), e se `whatsapp_business_account_id` vai em `user_data` ou no nível do evento.
 
 ## Respostas e estados da fila
 

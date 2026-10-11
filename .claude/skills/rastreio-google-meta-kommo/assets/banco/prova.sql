@@ -3,7 +3,7 @@
 -- A última linha tem de ser: PROVA_DESFEITA falhas=0
 do $$
 declare
-  falhas int := 0; r jsonb; x jsonb; n int; t text[]; ok boolean;
+  falhas int := 0; r jsonb; x jsonb; n int; t text[]; ok boolean; asrc_p text;
   procedure_falha text;
 begin
   -- 1. telefone: as duas formas do mesmo celular, e a chave com DDD
@@ -97,7 +97,7 @@ begin
   -- 8. etapa: fora do mapa não enfileira; venda enfileira nas duas; repetir não duplica
   insert into public.rastreio_mapa values (12405720, 95858036, 'qualificado', 'ACAO-QUALI', 'QualifiedLead', false),
                                           (12405720, 142, 'venda', 'ACAO-VENDA', 'Purchase', true);
-  update public.rastreio_config set valor_min = 300, valor_max = 150000, google_conta = '1234567890' where id = 1;
+  update public.rastreio_config set valor_min = 300, valor_max = 150000, google_conta = '1234567890', meta_waba_id = 'WABA1' where id = 1;
   r := public.rastreio_etapa('{"lead_id":1001,"pipeline_id":12405720,"status_id":95856292}');
   if (r->>'enfileirados')::int <> 0 then falhas := falhas + 1; raise notice 'F8 fora do mapa %', r; end if;
   r := public.rastreio_etapa('{"lead_id":1001,"pipeline_id":12405720,"status_id":142,"valor":6800,"telefones":["(48) 99946-6301"],"emails":[" Cliente@Exemplo.com "]}');
@@ -138,6 +138,20 @@ begin
   if (r->>'google')::int <> 1 then falhas := falhas + 1; raise notice 'F8k trava desligada nao enfileirou %', r; end if;
   update public.rastreio_eventos set estado = 'ignorado', motivo = 'prova' where lead_id in (1009, 1010);
   update public.rastreio_config set google_so_com_clique = true where id = 1;
+  -- lead de anúncio de WhatsApp (ctwa_clid) em cliente SEM a conta do WhatsApp (WABA) no config: a Meta recusa o
+  -- evento business_messaging sem whatsapp_business_account_id (subcode 2804116, medido em 11/10/2026) e a recusa
+  -- derruba o lote. Com telefone, sai como system_generated e sem o ctwa_clid; só com o ctwa_clid, não sai.
+  update public.rastreio_config set meta_waba_id = null where id = 1;
+  insert into public.rastreio_leads (lead_id, origem, grau, ctwa_clid) values (1011, 'Meta Ads', 'A', 'CTWA-11'), (1012, 'Meta Ads', 'A', 'CTWA-12');
+  r := public.rastreio_etapa('{"lead_id":1011,"pipeline_id":12405720,"status_id":95858036,"telefones":["11933332222"]}');
+  select action_source, identificadores into asrc_p, x from public.rastreio_eventos where plataforma = 'meta' and lead_id = 1011;
+  if (r->>'meta')::int <> 1 or asrc_p <> 'system_generated' or x ? 'ctwa_clid' then
+    falhas := falhas + 1; raise notice 'F8l ctwa sem WABA saiu como mensagem % % %', r, asrc_p, x; end if;
+  r := public.rastreio_etapa('{"lead_id":1012,"pipeline_id":12405720,"status_id":95858036}');
+  if (r->>'meta')::int <> 0 or r->>'motivo_meta' <> 'sem_waba_da_meta' then
+    falhas := falhas + 1; raise notice 'F8m so ctwa e sem WABA entrou na fila %', r; end if;
+  update public.rastreio_eventos set estado = 'ignorado', motivo = 'prova' where lead_id in (1011, 1012);
+  update public.rastreio_config set meta_waba_id = 'WABA1' where id = 1;
 
   -- 9. lote: meta desarmada e sem código de teste não entrega nada
   r := public.rastreio_lote('meta', 50);

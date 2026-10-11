@@ -462,7 +462,7 @@ def configuracoes_js(slug, r):
     # campo_origem_id vazio = ainda sem o campo "Origem comprovada": grava só UTM e GCLID (comando campo-origem cria)
     c = {"cliente": slug, "kommo_api": r["kommo_api"], "kommo_conta": r.get("kommo_conta"),
          "pipelines": r["pipelines"], "campos_tracking": r["campos_tracking"], "campo_origem_id": r.get("campo_origem_id"),
-         "origem_enums": r.get("origem_enums") or {},
+         "origem_enums": r.get("origem_enums") or {}, "campos_extra": r.get("campos_extra") or {},
          "etapas_mapeadas": ["%s:%s" % (e["pipeline_id"], e["status_id"]) for e in (r.get("etapas") or [])],
          "espera_sessoes": r.get("espera_sessoes", True), "lead_max_horas_antes": r.get("lead_max_horas_antes", 48),
          "teto_sem_lead": r.get("teto_sem_lead", 10)}
@@ -853,6 +853,11 @@ def ligar_meta(slug, aplicar):
         print("ligaria: %s -> nó 'rastreio (sub)' -> workflow %s, em paralelo ao que já sai do gatilho %r" % (alvo, sub, g["name"]))
         print("nada escrito. Feche a aba desse workflow no editor antes do --aplicar (o editor salva por cima).")
         return
+    # n8n novo recusa salvar workflow publicado que chama sub-workflow NÃO publicado (medido em 11/10/2026:
+    # "references workflow ... which is not published"). O [3] só tem gatilho de sub-workflow: publicar não dispara nada.
+    # n8n antigo recusa ativar workflow sem gatilho de verdade: aí o [3] fica como está, e lá a chamada já funciona.
+    st, b = http("POST", base + "/api/v1/workflows/%s/activate" % sub, {"X-N8N-API-KEY": chave})
+    print("[RASTREIO 3] %s" % ("publicado" if st < 300 else "não publicado (HTTP %s): em n8n antigo isso é o esperado" % st))
     bk = os.path.join(REPO, "clientes", slug, "n8n", "backup")
     os.makedirs(bk, exist_ok=True)
     io.open(os.path.join(bk, "%s-antes-do-rastreio-%s.json" % (alvo, time.strftime("%Y%m%d-%H%M%S"))), "w",
@@ -930,6 +935,42 @@ def campo_origem(slug, aplicar):
         sair("criado (%s) mas a releitura não bate: %s" % (novo["id"], lido))
     print("criado e conferido por releitura: %s" % novo["id"])
     gravar(lido)
+
+
+CAMPOS_DO_ANUNCIO = (("ad_id", "Anúncio de origem (id)"), ("ctwa_clid", "Clique do WhatsApp (ctwa_clid)"))
+
+
+def campos_do_anuncio(slug, aplicar):
+    """Campos de texto que recebem o que vem do anúncio de WhatsApp da Meta (referral): id do anúncio e o
+    identificador do clique. Sem eles o id do anúncio vai só no utm_term e o ctwa_clid fica só no banco."""
+    caminho, cfg = cfg_cliente(slug)
+    r = cfg.get("rastreio") or sair("sem bloco rastreio")
+    api, tok = kommo_acesso(slug, cfg)
+    extra = r.setdefault("campos_extra", {})
+    existentes = {(c.get("name") or "").strip().lower(): c for c in kommo_campos(api, tok)}
+    mudou = False
+    for chave, nome in CAMPOS_DO_ANUNCIO:
+        c = existentes.get(nome.lower())
+        if c:
+            if extra.get(chave) != c["id"]:
+                extra[chave], mudou = c["id"], True
+            print("campo %r já existe no Kommo: %s" % (nome, c["id"]))
+            continue
+        if not aplicar:
+            print("criaria no Kommo o campo de texto %r (%s)" % (nome, chave))
+            continue
+        st, b = http("POST", api + "/leads/custom_fields", {"Authorization": "Bearer " + tok}, [{"name": nome, "type": "text", "sort": 520}])
+        if st not in (200, 201):
+            sair("Kommo recusou a criação de %r (HTTP %s): %s" % (nome, st, b))
+        novo = b["_embedded"]["custom_fields"][0]
+        lido = kommo_get(api, tok, "/leads/custom_fields/%s" % novo["id"])
+        if not lido or lido.get("type") != "text":
+            sair("criado (%s) mas a releitura não bate: %s" % (novo["id"], lido))
+        extra[chave], mudou = novo["id"], True
+        print("criado e conferido por releitura: %r %s" % (nome, novo["id"]))
+    if mudou:
+        gravar_cfg(caminho, cfg)
+        print("config.json: campos_extra=%s (rode `montar %s` de novo)" % (json.dumps(extra, ensure_ascii=False), slug))
 
 
 # ------------------------------------------------------------------ testar (seco por padrão)
@@ -1104,7 +1145,12 @@ def plugar(slug, aplicar, so=None):
             return None
         st, b = http("GET", "%s/%s?fields=id,name" % (GRAPH, ds), {"Authorization": "Bearer " + tok})
         if st != 200:
-            sair("Meta: o token não leu o dataset %s (HTTP %s): %s" % (ds, st, str(b)[:200]))
+            # o token gerado no Gerenciador de Eventos ("Gerar token de acesso") ENVIA evento mas não LÊ o dataset
+            # (medido em 11/10/2026: GET devolve "(#100) Missing Permission"). Prova pelo uso sem gravar nada: envio
+            # com a lista vazia. "data must be non-empty" = token e dataset aceitos; subcode 33 = sem acesso ao dataset.
+            st2, b2 = http("POST", "%s/%s/events" % (GRAPH, ds), {"Authorization": "Bearer " + tok}, {"data": []})
+            if not (st2 == 400 and "must be non-empty" in str(b2)):
+                sair("Meta: o token não lê nem envia para o dataset %s (GET HTTP %s, envio vazio HTTP %s): %s" % (ds, st, st2, str(b2)[:200]))
         return {"name": "Authorization", "value": "Bearer " + tok}
 
     print("== credenciais no n8n (%s)" % base)
@@ -1236,6 +1282,7 @@ if __name__ == "__main__":
         criar(slug, "--aplicar" in a, "--sem-credencial" in a, opcao(a, "--modulo") == "1")
     elif cmd == "campo-origem":
         campo_origem(slug, "--aplicar" in a)
+        campos_do_anuncio(slug, "--aplicar" in a)
     elif cmd == "testar":
         testar(slug, a[2] if len(a) > 2 else "", a[3:])
     else:

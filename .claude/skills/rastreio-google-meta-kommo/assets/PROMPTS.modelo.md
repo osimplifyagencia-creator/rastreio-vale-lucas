@@ -89,7 +89,7 @@ Etapa 4: n8n.
 
 1. R criar {{SLUG}}  e depois  --aplicar
    Cria os 8 workflows [RASTREIO] desligados e grava os ids em rastreio.workflows no config.
-2. Ative pela API do n8n (skill n8n-pela-api) os workflows 1, 2, 4, 5, 6, 7 e 8. O 3 é sub-workflow e não se ativa.
+2. Ative pela API do n8n (skill n8n-pela-api) os workflows 1, 2, 4, 5, 6, 7 e 8. O 3 é sub-workflow: quem publica ele é o `ligar-meta`, antes de pendurar (n8n novo recusa chamar sub-workflow não publicado).
 3. Releia cada um pela API e confira: active=true (menos o 3), e todo nó que fala com Kommo, Supabase, Google ou
    Meta tem credencial anexada e autenticação configurada.
 
